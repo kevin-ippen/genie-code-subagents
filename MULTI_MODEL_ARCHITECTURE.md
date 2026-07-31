@@ -747,13 +747,15 @@ These fill the biggest gaps in OOTB Genie Code: no internet access, no HTTP clie
 - `fetch` — HTTP client with security blocklist ✅
 - `compare` — visual/textual diff ✅
 - `research` — multi-page breadth-first crawl + synthesis ✅
-- `crawl` — structured multi-page extraction with link pattern filtering ✅
+- `crawl` — multi-mode browser tool (extract/journey/audit) ✅
+- Merged `health` + `list_models` → `status` ✅
+- Merged `get_updates` into `get_task_result` (no task_id = bulk) ✅
 
 **Remaining:**
-- `journey` — user flow walkthrough
-- `audit` — consistency/quality check
 - `digest` — large document processing
 - `monitor` — background polling
+
+**Architecture decision:** journey + audit are MODES of `crawl` (not separate tools) to stay within the 15-tool MCP connector limit.
 
 #### `search` — Web Search via Native Model Tools
 
@@ -821,24 +823,21 @@ async def tool_research(query, start_urls=None, max_pages=5, model=None):
     # Background: visits pages, extracts facts via LLM, follows links, synthesizes
 ```
 
-#### Remaining Crawl Modes (TODO)
+#### `crawl` Modes (all ✅ SHIPPED as modes of one tool)
 
-| Tool | Purpose | Behavior |
+| Mode | Purpose | Key Params |
 | --- | --- | --- |
-| `journey` | User flow walkthrough | Follow a defined path (login → dashboard → report), evaluate UX at each step. |
-| `audit` | Consistency/quality check | Visit N pages, check for broken links, stale content, inconsistencies. |
-
-All are ASYNC. All accept `url`, `depth`/`max_pages`, and mode-specific params.
+| `extract` | Structured extraction per page | `extract_schema`, `link_pattern`, `max_pages` |
+| `journey` | Sequential user flow walkthrough | `steps` (ordered actions), eval criteria via `extract_schema` |
+| `audit` | Quality/consistency checking | checks via `extract_schema`, `link_pattern` scope |
 
 ```python
-# journey mode
-async def tool_journey(start_url, steps, evaluate_criteria=None, model=None):
-    """Walk a user journey, screenshot + assess each step."""
-
-# audit mode
-async def tool_audit(url, checks=["broken_links", "consistency", "accessibility"], max_pages=10, model=None):
-    """Multi-page quality audit with structured findings."""
+async def tool_crawl(url, mode="extract", extract_schema="", link_pattern="",
+                     steps=None, max_pages=10, same_origin=True, model=None):
+    # Dispatches to _do_crawl / _do_journey / _do_audit
 ```
+
+**Design decision:** Consolidating as modes keeps us at 15 tools (MCP connector hard limit).
 
 #### `digest` — Large Document Processing
 

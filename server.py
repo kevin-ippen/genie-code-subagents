@@ -616,15 +616,17 @@ TOOL_SCHEMAS = [
          "model": {"type": "string", "description": "Override default model.", "default": None},
      }, "required": ["query"]}},
     {"name": "crawl",
-     "description": "Only invoke when the user says 'subagent' in their message. Structured multi-page extraction: spider pages matching a link pattern and extract the same schema from each page. Returns uniform structured data. ASYNC: returns a task_id immediately.",
+     "description": "Only invoke when the user says 'subagent' in their message. Multi-page browser tool with 3 modes: 'extract' (structured data from each page), 'journey' (walk a user flow step-by-step), 'audit' (check pages for issues). ASYNC: returns a task_id immediately.",
      "inputSchema": {"type": "object", "properties": {
-         "url": {"type": "string", "description": "Starting URL to crawl from."},
-         "link_pattern": {"type": "string", "description": "Regex or keyword to filter which links to follow (e.g. '/product/', 'blog', '/docs/.*').", "default": ""},
-         "extract_schema": {"type": "string", "description": "What to extract from each page. Natural language or JSON schema (e.g. 'title, price, description' or '{title: string, price: number}')."},
-         "max_pages": {"type": "integer", "description": "Max pages to crawl (1-20).", "default": 10},
+         "url": {"type": "string", "description": "Starting URL (or first step URL for journey mode)."},
+         "mode": {"type": "string", "description": "Crawl mode: 'extract' (default, structured extraction per page), 'journey' (sequential user flow walkthrough), 'audit' (quality/consistency check).", "default": "extract", "enum": ["extract", "journey", "audit"]},
+         "extract_schema": {"type": "string", "description": "For extract mode: what to pull from each page. For journey: evaluation criteria. For audit: what to check.", "default": ""},
+         "link_pattern": {"type": "string", "description": "Extract mode: regex/keyword to filter links. Journey mode: ignored. Audit mode: scope filter.", "default": ""},
+         "steps": {"type": "array", "items": {"type": "string"}, "description": "Journey mode only: ordered list of actions/goals for each step (e.g. ['Click Login', 'Fill username field', 'Submit form']).", "default": []},
+         "max_pages": {"type": "integer", "description": "Max pages to visit (1-20).", "default": 10},
          "same_origin": {"type": "boolean", "description": "Only follow links on the same domain.", "default": True},
          "model": {"type": "string", "description": "Override default model.", "default": None},
-     }, "required": ["url", "extract_schema"]}},
+     }, "required": ["url"]}},
     {"name": "compare",
      "description": "Only invoke when the user says 'subagent' in their message. Compare two images or two text blocks and return a structured diff. Use for visual regression, before/after checks, or text comparison.",
      "inputSchema": {"type": "object", "properties": {
@@ -1259,14 +1261,242 @@ async def _do_crawl(task_id, start_url, link_pattern, extract_schema,
         _fail_task(task_id, str(e))
 
 
-async def tool_crawl(url, link_pattern="", extract_schema="", max_pages=10,
-                     same_origin=True, model=None, **kw):
+async def tool_crawl(url, mode="extract", extract_schema="", link_pattern="",
+                     steps=None, max_pages=10, same_origin=True, model=None, **kw):
     user_token = _current_user_token.get()
     max_pages = min(max(1, max_pages), 20)
-    task_id = _create_task("crawl", url[:40] + " | " + extract_schema[:30])
-    asyncio.create_task(_do_crawl(task_id, url, link_pattern, extract_schema,
-                                  max_pages, same_origin, model, user_token))
-    return json.dumps({"task_id": task_id, "status": "running", "tool": "crawl"})
+    steps = steps or []
+
+    if mode == "journey":
+        summary = "journey: " + url[:30] + " (" + str(len(steps)) + " steps)"
+        task_id = _create_task("crawl", summary)
+        asyncio.create_task(_do_journey(task_id, url, steps, extract_schema, model, user_token))
+    elif mode == "audit":
+        summary = "audit: " + url[:40]
+        task_id = _create_task("crawl", summary)
+        asyncio.create_task(_do_audit(task_id, url, extract_schema, link_pattern,
+                                      max_pages, same_origin, model, user_token))
+    else:  # extract (default)
+        summary = url[:40] + " | " + extract_schema[:30]
+        task_id = _create_task("crawl", summary)
+        asyncio.create_task(_do_crawl(task_id, url, link_pattern, extract_schema,
+                                      max_pages, same_origin, model, user_token))
+    return json.dumps({"task_id": task_id, "status": "running", "tool": "crawl", "mode": mode})
+
+
+
+# --- JOURNEY MODE (sequential user flow) ---
+
+async def _do_journey(task_id, start_url, steps, criteria, model_override, user_token):
+    """Walk a user flow step-by-step, evaluating each step."""
+    try:
+        if not steps:
+            _fail_task(task_id, "Journey mode requires 'steps' array (list of actions/goals).")
+            return
+
+        step_results = []
+        total_tokens = 0
+
+        async def _journey_fn(page):
+            nonlocal total_tokens
+            results_inner = []
+
+            for i, step_goal in enumerate(steps):
+                step_num = i + 1
+                # Execute this step using browser automation
+                step_result = await _browser_plan_and_execute(page, step_goal, max_rounds=3, model_override=model_override)
+
+                # Evaluate the result
+                aria = await _get_aria_tree(page)
+                title = await page.title()
+                current_url = page.url
+
+                eval_parts = [
+                    "Evaluate this step in a user journey.",
+                    "",
+                    "STEP " + str(step_num) + "/" + str(len(steps)) + ": " + step_goal,
+                    "CURRENT URL: " + current_url,
+                    "PAGE TITLE: " + title,
+                    "STEP OUTCOME: " + ("Success" if step_result.get("done") else "Incomplete"),
+                    "STEP RESULT: " + str(step_result.get("result", ""))[:300],
+                ]
+                if criteria:
+                    eval_parts.append("")
+                    eval_parts.append("EVALUATION CRITERIA: " + criteria)
+                eval_parts.extend([
+                    "",
+                    "Return JSON:",
+                    '{"success": true/false, "observation": "what happened", "issues": ["any UX issues"], "screenshot_description": "brief description of current state"}',
+                    "",
+                    "ARIA Tree (first 4000 chars):",
+                    aria[:4000],
+                ])
+
+                messages = [
+                    {"role": "system", "content": "Evaluate user journey steps. Return ONLY valid JSON."},
+                    {"role": "user", "content": "\n".join(eval_parts)},
+                ]
+                eval_result = await _call_model("analyze", messages, max_tokens=512, override=model_override)
+                total_tokens += eval_result.get("usage", {}).get("total_tokens", 0)
+
+                evaluation = {}
+                if not eval_result.get("error"):
+                    raw = eval_result["text"].strip()
+                    if raw.startswith("```"):
+                        lines = raw.split("\n")
+                        raw = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+                    try:
+                        evaluation = json.loads(raw)
+                    except json.JSONDecodeError:
+                        evaluation = {"observation": raw[:200]}
+
+                results_inner.append({
+                    "step": step_num,
+                    "goal": step_goal,
+                    "url": current_url,
+                    "title": title,
+                    "completed": step_result.get("done", False),
+                    "evaluation": evaluation,
+                })
+
+            return json.dumps(results_inner)
+
+        result_str = await _run_browser_session(start_url, user_token, _journey_fn)
+        step_results = json.loads(result_str)
+
+        output = {
+            "mode": "journey",
+            "start_url": start_url,
+            "steps_total": len(steps),
+            "steps_completed": sum(1 for s in step_results if s.get("completed")),
+            "results": step_results,
+            "total_tokens": total_tokens,
+        }
+        _complete_task(task_id, json.dumps(output, indent=2),
+                       model_used=model_override or "gemini-flash", tokens=total_tokens)
+    except Exception as e:
+        _fail_task(task_id, str(e))
+
+
+# --- AUDIT MODE (quality/consistency check) ---
+
+async def _do_audit(task_id, start_url, checks_description, link_pattern,
+                    max_pages, same_origin, model_override, user_token):
+    """Visit pages and check for quality issues."""
+    try:
+        if not checks_description:
+            checks_description = "broken links, missing images, accessibility issues, inconsistent styling, stale content"
+
+        pages_audited = []
+        urls_queue = [start_url]
+        urls_seen = set()
+        total_tokens = 0
+        all_issues = []
+
+        page_count = 0
+        while urls_queue and page_count < max_pages:
+            url = urls_queue.pop(0)
+            if url in urls_seen:
+                continue
+            urls_seen.add(url)
+            page_count += 1
+
+            try:
+                page_result = await _audit_single_page(url, checks_description, model_override, user_token)
+                total_tokens += page_result.get("tokens", 0)
+                pages_audited.append(page_result)
+
+                # Collect issues
+                for issue in page_result.get("issues", []):
+                    all_issues.append({"url": url, "issue": issue})
+
+                # Queue links for more auditing
+                if page_count < max_pages:
+                    for link in page_result.get("links", []):
+                        if link in urls_seen or not link.startswith("http"):
+                            continue
+                        if same_origin and not _is_same_origin(link, start_url):
+                            continue
+                        if link_pattern and not _link_matches_pattern(link, link_pattern, start_url):
+                            continue
+                        urls_queue.append(link)
+            except Exception as e:
+                pages_audited.append({"url": url, "error": str(e), "issues": []})
+
+        output = {
+            "mode": "audit",
+            "start_url": start_url,
+            "checks": checks_description,
+            "pages_audited": len(pages_audited),
+            "total_issues": len(all_issues),
+            "issues": all_issues,
+            "pages": [{"url": p.get("url", ""), "title": p.get("title", ""),
+                       "score": p.get("score"), "issues_count": len(p.get("issues", []))}
+                      for p in pages_audited],
+            "total_tokens": total_tokens,
+        }
+        _complete_task(task_id, json.dumps(output, indent=2),
+                       model_used=model_override or "gemini-flash", tokens=total_tokens)
+    except Exception as e:
+        _fail_task(task_id, str(e))
+
+
+async def _audit_single_page(url, checks_description, model_override, user_token):
+    """Audit a single page for quality issues."""
+    try:
+        async def _audit_fn(page):
+            aria = await _get_aria_tree(page)
+            title = await page.title()
+            page_url = page.url
+
+            audit_parts = [
+                "You are a web quality auditor. Check this page for issues.",
+                "",
+                "CHECKS TO PERFORM: " + checks_description,
+                "URL: " + page_url,
+                "TITLE: " + title,
+                "",
+                "Return JSON:",
+                '{"issues": ["issue 1", "issue 2"], "score": 1-10, "links": ["url1", "url2"], "summary": "brief assessment"}',
+                "",
+                "issues: specific problems found (empty array if none)",
+                "score: 1 (terrible) to 10 (perfect)",
+                "links: page links to audit next (max 5)",
+                "summary: one-line assessment",
+                "",
+                "ARIA Tree (first 7000 chars):",
+                aria[:7000],
+            ]
+
+            messages = [
+                {"role": "system", "content": "Audit web pages for quality issues. Return ONLY valid JSON."},
+                {"role": "user", "content": "\n".join(audit_parts)},
+            ]
+            result = await _call_model("analyze", messages, max_tokens=1024, override=model_override)
+
+            output = {"url": page_url, "title": title, "issues": [], "links": [], "score": None, "tokens": 0}
+            output["tokens"] = result.get("usage", {}).get("total_tokens", 0)
+
+            if not result.get("error"):
+                raw = result["text"].strip()
+                if raw.startswith("```"):
+                    lines = raw.split("\n")
+                    raw = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+                try:
+                    extracted = json.loads(raw)
+                    output["issues"] = extracted.get("issues", [])
+                    output["links"] = extracted.get("links", [])[:5]
+                    output["score"] = extracted.get("score")
+                    output["summary"] = extracted.get("summary", "")
+                except json.JSONDecodeError:
+                    output["issues"] = [raw[:300]]
+
+            return json.dumps(output)
+
+        result_str = await _run_browser_session(url, user_token, _audit_fn)
+        return json.loads(result_str)
+    except Exception as e:
+        return {"url": url, "error": str(e), "issues": [], "links": [], "tokens": 0}
 
 
 # --- COMPARE TOOL ---

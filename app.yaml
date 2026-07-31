@@ -1,15 +1,13 @@
-# mcp-gemini-subagent v1.0.0
-# HARD CONSTRAINT: single worker only (in-memory task store)
 command:
   - sh
   - -c
   - "uvicorn server:app --host 0.0.0.0 --port $DATABRICKS_APP_PORT --workers 1"
 env:
-  - name: GEMINI_MODEL
+  - name: DEFAULT_MODEL
     value: "databricks-gemini-3-6-flash"
-  - name: GEMINI_CONCURRENCY
+  - name: DEFAULT_CONCURRENCY
     value: "10"
-  - name: GEMINI_DEFAULT_MAX_TOKENS
+  - name: DEFAULT_MAX_TOKENS
     value: "1024"
   - name: BROWSER_LIBS_PATH
     value: "/app/python/source_code/libs"

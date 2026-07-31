@@ -1,4 +1,4 @@
-"""MCP Multi-Model Subagent Server v1.0.0.
+"""MCP Genie Subagent Server v1.1.0-beta.
 
 Task-oriented tools with smart model defaults and explicit overrides.
 Architecture: see MULTI_MODEL_ARCHITECTURE.md
@@ -40,14 +40,14 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("mcp-subagent")
+logger = logging.getLogger("mcp-genie-subagent")
 
 # ============================================================
 # CONFIG
 # ============================================================
 MCP_PROTOCOL_VERSION = "2025-03-26"
-SERVER_NAME = "mcp-subagent"
-SERVER_VERSION = "1.1.0-beta"
+SERVER_NAME = "mcp-genie-subagent"
+SERVER_VERSION = "1.1.0"
 
 TASK_TTL_SECONDS = int(os.environ.get("TASK_TTL_SECONDS", "600"))
 MAX_FAN_OUT = 10

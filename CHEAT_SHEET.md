@@ -1,7 +1,7 @@
-# MCP Gemini Subagent — Comprehensive Cheat Sheet
+# MCP Genie Subagent — Comprehensive Cheat Sheet
 
-**Version:** v1.1.0-beta | **Tools:** 15 | **Models:** 5 | **Deployment:** `01f18ce726b21aa780e90702019a625b`
-**URL:** `https://mcp-gemini-subagent-1444828305810485.aws.databricksapps.com`
+**Version:** v1.1.0 | **Tools:** 15 | **Models:** 5 | **Deployment:** `01f18ce726b21aa780e90702019a625b`
+**URL:** `https://mcp-genie-subagent-1444828305810485.aws.databricksapps.com`
 **Trigger:** All tools gated — say **"subagent"** in your message to activate.
 
 ---
@@ -191,9 +191,9 @@ from databricks.sdk.service.apps import AppDeployment, AppDeploymentMode
 
 w = WorkspaceClient()
 deployment = w.apps.deploy_and_wait(
-    app_name="mcp-gemini-subagent",
+    app_name="mcp-genie-subagent",
     app_deployment=AppDeployment(
-        source_code_path="/Workspace/Users/kevin.ippen@databricks.com/mcp-gemini-subagent",
+        source_code_path="/Workspace/Users/kevin.ippen@databricks.com/mcp-genie-subagent",
         mode=AppDeploymentMode.SNAPSHOT
     )
 )
@@ -206,7 +206,7 @@ deployment = w.apps.deploy_and_wait(
 ## File Layout
 
 ```
-/Workspace/Users/kevin.ippen@databricks.com/mcp-gemini-subagent/
+/Workspace/Users/kevin.ippen@databricks.com/mcp-genie-subagent/
 ├── server.py              (1931 lines, single-file server)
 ├── app.yaml               (uvicorn --workers 1)
 ├── requirements.txt       (starlette, uvicorn, openai, httpx, playwright, databricks-sdk)
@@ -225,7 +225,7 @@ deployment = w.apps.deploy_and_wait(
 | Version | Status | Features |
 |---------|--------|----------|
 | v1.0.0 | ✅ Shipped | Multi-model foundation, 9 core tools, routing, debate |
-| v1.1.0-beta | ✅ Current | +search, fetch, compare, research, crawl (3 modes), tool merges = 15 tools |
+| v1.1.0 | ✅ Current | +search, fetch, compare, research, crawl (3 modes), tool merges = 15 tools |
 | v1.1.0 | 🔜 Next | +digest (large doc processing), +monitor (background polling) |
 | v1.2.0 | Planned | multi_analyze, cascade, visual_review, agent tool-use |
 | v1.3.0 | Planned | Caching, ARIA compaction, connection pooling, fallback chains, module split |

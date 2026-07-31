@@ -913,7 +913,7 @@ Long-running async task that checks a condition periodically.
 ## 9. File Structure (Target)
 
 ```
-/mcp-gemini-subagent/
+/mcp-genie-subagent/
 ├── server.py              # Main MCP server (routes, JSON-RPC)
 ├── models.py              # Model registry, routing, client management
 ├── agents.py              # AgentConfig definitions per task type

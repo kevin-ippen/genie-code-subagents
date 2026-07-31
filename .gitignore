@@ -21,3 +21,6 @@ Thumbs.db
 
 # Databricks
 .databricks/
+
+# Personal / workspace-specific
+CHEAT_SHEET.md

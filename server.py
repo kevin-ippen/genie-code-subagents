@@ -118,7 +118,7 @@ MODEL_REGISTRY: dict[str, dict] = {
     "qwen-3.5-122b": {
         "endpoint": "databricks-qwen35-122b-a10b",
         "provider": "qwen",
-        "vision": True,
+        "vision": False,
         "thinking": True,
         "max_context": 128_000,
         "max_output": 8192,
@@ -130,7 +130,7 @@ MODEL_REGISTRY: dict[str, dict] = {
     "glm-5.2": {
         "endpoint": "databricks-glm-5-2",
         "provider": "zai",
-        "vision": True,
+        "vision": False,
         "thinking": True,
         "max_context": 128_000,
         "max_output": 8192,

@@ -1,0 +1,19 @@
+bundle:
+  name: genie-code-subagents
+
+include:
+  - resources/*.yml
+
+sync:
+  include:
+    - app.yaml
+    - requirements.txt
+    - server.py
+
+targets:
+  fevm:
+    default: true
+    mode: production
+    workspace:
+      profile: fevm
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

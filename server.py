@@ -53,7 +53,7 @@ TASK_TTL_SECONDS = int(os.environ.get("TASK_TTL_SECONDS", "600"))
 MAX_FAN_OUT = 10
 MAX_BROWSER_ROUNDS = int(os.environ.get("MAX_BROWSER_ROUNDS", "3"))
 BROWSER_TIMEOUT_MS = int(os.environ.get("BROWSER_TIMEOUT_MS", "30000"))
-SYNC_MAX_TOKENS_CAP = 2048
+SYNC_MAX_TOKENS_CAP = 8192
 ALLOWED_IMAGE_MIMES = frozenset(["image/png", "image/jpeg", "image/webp", "image/gif"])
 
 # ============================================================
@@ -115,6 +115,30 @@ MODEL_REGISTRY: dict[str, dict] = {
         "cost_tier": "low",
         "concurrency_limit": 10,
     },
+    "qwen-3.5-122b": {
+        "endpoint": "databricks-qwen35-122b-a10b",
+        "provider": "qwen",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 8192,
+        "min_output": 4096,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "glm-5.2": {
+        "endpoint": "databricks-glm-5-2",
+        "provider": "zai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 8192,
+        "min_output": 4096,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
 }
 
 DEFAULT_ROUTING: dict[str, str] = {
@@ -153,6 +177,15 @@ def _model_key_for(role: str, override: str | None = None) -> str:
     if override and override in MODEL_REGISTRY:
         return override
     return DEFAULT_ROUTING.get(role, "gemini-flash")
+
+
+def _workspace_host_url() -> str:
+    host = os.environ.get("DATABRICKS_HOST", "").strip().rstrip("/")
+    if not host:
+        raise RuntimeError("DATABRICKS_HOST is not configured")
+    if not host.startswith(("http://", "https://")):
+        host = f"https://{host}"
+    return host
 
 
 # ============================================================
@@ -259,56 +292,96 @@ async def _call_model(role: str, messages: list[dict], max_tokens: int = 1024,
     model_key = _model_key_for(role, override)
     config = MODEL_REGISTRY[model_key]
     token = _get_token()
-    host = os.environ.get("DATABRICKS_HOST", "").rstrip("/")
-    client = AsyncOpenAI(api_key=token, base_url=f"{host}/serving-endpoints", max_retries=0)
+    host = _workspace_host_url()
+    transport = httpx.AsyncClient(trust_env=False)
+    client = AsyncOpenAI(
+        api_key=token,
+        base_url=f"{host}/serving-endpoints",
+        max_retries=0,
+        http_client=transport,
+    )
     sem = _get_semaphore(model_key)
 
-    max_tokens = min(max_tokens, config["max_output"])
+    max_tokens = min(
+        max(max_tokens, config.get("min_output", 0)),
+        config["max_output"],
+    )
     start = time.time()
     retries = 0
     max_retries = 3
     last_error: Exception | None = None
 
-    while retries <= max_retries:
-        async with sem:
-            try:
-                response = await client.chat.completions.create(
-                    model=config["endpoint"], messages=messages, max_tokens=max_tokens
-                )
-                elapsed = time.time() - start
-                text = extract_text(config["provider"], response.choices[0].message.content)
-                usage = response.usage
-                return {
-                    "text": text,
-                    "model": model_key,
-                    "endpoint": config["endpoint"],
-                    "usage": {
-                        "prompt_tokens": usage.prompt_tokens if usage else 0,
-                        "completion_tokens": usage.completion_tokens if usage else 0,
-                        "total_tokens": (usage.prompt_tokens or 0) + (usage.completion_tokens or 0) if usage else 0,
-                    },
-                    "latency_s": round(elapsed, 3),
-                    "retries": retries,
-                }
-            except RateLimitError as e:
-                last_error = e
-                retries += 1
-                if retries > max_retries:
-                    break
-                await asyncio.sleep(1.0 * (2 ** (retries - 1)) + random.uniform(0, 0.5))
-            except APIStatusError as e:
-                if e.status_code >= 500:
+    try:
+        while retries <= max_retries:
+            async with sem:
+                try:
+                    response = await client.chat.completions.create(
+                        model=config["endpoint"],
+                        messages=messages,
+                        max_tokens=max_tokens,
+                    )
+                    elapsed = time.time() - start
+                    text = extract_text(
+                        config["provider"], response.choices[0].message.content
+                    )
+                    usage = response.usage
+                    return {
+                        "text": text,
+                        "model": model_key,
+                        "endpoint": config["endpoint"],
+                        "usage": {
+                            "prompt_tokens": usage.prompt_tokens if usage else 0,
+                            "completion_tokens": usage.completion_tokens if usage else 0,
+                            "total_tokens": (
+                                (usage.prompt_tokens or 0)
+                                + (usage.completion_tokens or 0)
+                                if usage
+                                else 0
+                            ),
+                        },
+                        "latency_s": round(elapsed, 3),
+                        "retries": retries,
+                    }
+                except RateLimitError as e:
                     last_error = e
                     retries += 1
                     if retries > max_retries:
                         break
                     await asyncio.sleep(1.0 * (2 ** (retries - 1)) + random.uniform(0, 0.5))
-                else:
-                    return {"text": "", "error": f"API error {e.status_code}: {e.message}", "model": model_key}
-            except Exception as e:
-                return {"text": "", "error": f"{type(e).__name__}: {e}", "model": model_key}
+                except APIStatusError as e:
+                    if e.status_code >= 500:
+                        last_error = e
+                        retries += 1
+                        if retries > max_retries:
+                            break
+                        await asyncio.sleep(
+                            1.0 * (2 ** (retries - 1)) + random.uniform(0, 0.5)
+                        )
+                    else:
+                        return {
+                            "text": "",
+                            "error": f"API error {e.status_code}: {e.message}",
+                            "model": model_key,
+                        }
+                except Exception as e:
+                    cause = f"; cause={type(e.__cause__).__name__}: {e.__cause__}" if e.__cause__ else ""
+                    return {
+                        "text": "",
+                        "error": f"{type(e).__name__}: {e}{cause}",
+                        "model": model_key,
+                    }
 
-    return {"text": "", "error": f"{type(last_error).__name__}: {last_error}" if last_error else "Unknown error", "model": model_key}
+        return {
+            "text": "",
+            "error": (
+                f"{type(last_error).__name__}: {last_error}"
+                if last_error
+                else "Unknown error"
+            ),
+            "model": model_key,
+        }
+    finally:
+        await client.close()
 
 
 # ============================================================

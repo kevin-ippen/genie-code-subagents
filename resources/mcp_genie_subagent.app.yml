@@ -1,0 +1,6 @@
+resources:
+  apps:
+    mcp_genie_subagent:
+      name: mcp-genie-subagent
+      description: Multi-model MCP overflow service for bounded research and review.
+      source_code_path: ..

@@ -37,6 +37,7 @@ from ddgs import DDGS
 from ..models import SearchRequest, SearchResponse, SearchResult
 from ..normalization import canonicalize_url
 from ..outcomes import SearchOutcome, classify_outcome
+from ..vendors.ddg_parser import parse_ddg_html as _vendored_ddg_parse
 
 logger = logging.getLogger(__name__)
 
@@ -45,13 +46,48 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Primary: distinct indexes, best coverage
-PRIMARY_BACKENDS = ("brave", "mojeek")
+# Brave is the only reliably working adapter in ddgs 9.14.4
+PRIMARY_BACKENDS = ("brave",)
 
-# Secondary: good fallback, DDG proxies Bing results
-SECONDARY_BACKENDS = ("duckduckgo",)
+# Secondary: Mojeek when reachable (network-dependent)
+SECONDARY_BACKENDS = ("mojeek",)
 
-# Emergency: only when primary + secondary produce < 3 results
-EMERGENCY_BACKENDS = ("yahoo", "startpage")
+# Emergency: DDG adapter is BROKEN in ddgs 9.14.4 (parser drift confirmed
+# 2026-08-05: HTML has 10 result__a elements, adapter parses 0).
+# Use vendored parser via _parse_ddg_html() as fallback.
+EMERGENCY_BACKENDS = ("duckduckgo", "yahoo", "startpage")
+
+    @staticmethod
+    def _sync_search_ddg_fallback(
+        query: str,
+        max_results: int = 10,
+        timelimit: str | None = None,
+    ) -> list[dict]:
+        """Fallback: direct HTTP to DDG HTML endpoint + vendored parser.
+
+        Used when ddgs adapter fails (parser drift confirmed in 9.14.4).
+        Exercises the same endpoint but uses our own extraction.
+        """
+        import httpx
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        data = {"q": query, "b": ""}
+        if timelimit:
+            data["df"] = timelimit
+
+        with httpx.Client(timeout=10, follow_redirects=True, headers=headers) as client:
+            resp = client.post("https://html.duckduckgo.com/html/", data=data)
+            resp.raise_for_status()
+            return _vendored_ddg_parse(resp.text, max_results=max_results)
+
 
 # Reference: always included for factual/definitional queries
 REFERENCE_BACKENDS = ("wikipedia",)
@@ -181,6 +217,28 @@ class HtmlMetasearchProvider:
         for backend, (results, diag) in zip(backends, raw_results):
             provider_results[backend] = results
             provider_diagnostics[backend] = diag
+
+            # DDG parser drift recovery: if ddgs returned empty, try vendored parser
+            outcome = diag.get("outcome", SearchOutcome.UPSTREAM_ERROR)
+            if (
+                backend == "duckduckgo"
+                and outcome in (SearchOutcome.NO_RESULTS, SearchOutcome.PARSER_DRIFT)
+                and not results
+            ):
+                try:
+                    vendored_results = self._sync_search_ddg_fallback(
+                        query=query,
+                        max_results=request.num_results if hasattr(request, 'num_results') else 10,
+                    )
+                    if vendored_results:
+                        results = vendored_results
+                        diag["status"] = SearchOutcome.OK.value
+                        diag["outcome"] = SearchOutcome.OK
+                        diag["result_count"] = len(results)
+                        diag["recovery"] = "vendored_parser"
+                        logger.info(f"DDG vendored parser recovered {len(results)} results")
+                except Exception as ve:
+                    logger.debug(f"DDG vendored fallback also failed: {ve}")
 
             # Update circuit breaker based on typed outcome
             outcome = diag.get("outcome", SearchOutcome.UPSTREAM_ERROR)

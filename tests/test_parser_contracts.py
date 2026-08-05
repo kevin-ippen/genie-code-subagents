@@ -241,3 +241,79 @@ class TestOutcomeClassification:
             results=[], status_code=None, raw_body=None, backend="brave"
         )
         assert outcome == SearchOutcome.UPSTREAM_ERROR
+
+
+
+# ---------------------------------------------------------------------------
+# Vendored DDG parser tests (direct, no ddgs dependency)
+# ---------------------------------------------------------------------------
+
+class TestVendoredDDGParser:
+    """Contract tests for the vendored DuckDuckGo HTML parser.
+
+    These run directly against the captured fixture without ddgs.
+    The vendored parser is proven working — these tests guard regression.
+    """
+
+    def test_extracts_results_from_fixture(self):
+        """Vendored parser extracts ≥5 results from captured DDG HTML."""
+        html, sidecar = load_fixture("duckduckgo", "normal-page-1")
+
+        from search_core.vendors.ddg_parser import parse_ddg_html
+        results = parse_ddg_html(html)
+
+        assert len(results) >= 5, (
+            f"Vendored parser got {len(results)} results from DDG HTML "
+            f"that has 10 result__a elements. Parser regressed."
+        )
+
+    def test_urls_are_unwrapped(self):
+        """URLs must NOT contain DDG redirect wrapper."""
+        html, sidecar = load_fixture("duckduckgo", "normal-page-1")
+
+        from search_core.vendors.ddg_parser import parse_ddg_html
+        results = parse_ddg_html(html)
+
+        for result in results:
+            url = result["href"]
+            assert "duckduckgo.com/l/" not in url, (
+                f"URL still wrapped in DDG redirect: {url}"
+            )
+            assert "uddg=" not in url, (
+                f"URL still has uddg= param: {url}"
+            )
+            assert url.startswith(("http://", "https://")), (
+                f"URL is not absolute: {url}"
+            )
+
+    def test_required_fields_populated(self):
+        """Every result has non-empty title and href."""
+        html, sidecar = load_fixture("duckduckgo", "normal-page-1")
+
+        from search_core.vendors.ddg_parser import parse_ddg_html
+        results = parse_ddg_html(html)
+
+        for result in results:
+            assert result["title"].strip(), "Empty title"
+            assert result["href"].strip(), "Empty href"
+            assert "body" in result  # snippet may be empty for some results
+
+    def test_known_domains_present(self):
+        """For a research query, expect github.com in results."""
+        html, sidecar = load_fixture("duckduckgo", "normal-page-1")
+
+        from search_core.vendors.ddg_parser import parse_ddg_html
+        results = parse_ddg_html(html)
+
+        urls = [r["href"] for r in results]
+        assert any("github.com" in url for url in urls), (
+            f"Expected github.com in research results. Got: {urls[:3]}"
+        )
+
+    def test_empty_html_returns_empty(self):
+        """Empty/minimal HTML returns empty list (no crash)."""
+        from search_core.vendors.ddg_parser import parse_ddg_html
+
+        assert parse_ddg_html("") == []
+        assert parse_ddg_html("<html><body></body></html>") == []
+        assert parse_ddg_html("not html at all") == []

@@ -36,6 +36,7 @@ from ddgs import DDGS
 
 from ..models import SearchRequest, SearchResponse, SearchResult
 from ..normalization import canonicalize_url
+from ..outcomes import SearchOutcome, classify_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -181,11 +182,13 @@ class HtmlMetasearchProvider:
             provider_results[backend] = results
             provider_diagnostics[backend] = diag
 
-            # Update circuit breaker
-            if diag["status"] == "ok" and results:
+            # Update circuit breaker based on typed outcome
+            outcome = diag.get("outcome", SearchOutcome.UPSTREAM_ERROR)
+            if outcome == SearchOutcome.OK:
                 _provider_health[backend].record_success()
-            elif diag["status"] != "ok":
+            elif outcome in (SearchOutcome.RATE_LIMITED, SearchOutcome.BLOCKED, SearchOutcome.UPSTREAM_ERROR):
                 _provider_health[backend].record_failure()
+            # NO_RESULTS and PARSER_DRIFT don't trip the circuit breaker
 
         # Emergency fallback if insufficient results
         total_results = sum(len(r) for r in provider_results.values())
@@ -289,19 +292,36 @@ class HtmlMetasearchProvider:
                 ),
             )
             elapsed = int((time.time() - start) * 1000)
+            # Classify outcome (we don't have raw_body here — ddgs handles parsing)
+            outcome = SearchOutcome.OK if results else SearchOutcome.NO_RESULTS
             return results, {
-                "status": "ok",
+                "status": outcome.value,
+                "outcome": outcome,
                 "result_count": len(results),
                 "elapsed_ms": elapsed,
             }
         except Exception as e:
             elapsed = int((time.time() - start) * 1000)
             error_type = type(e).__name__
+            error_msg = str(e).lower()
             logger.warning(f"Backend {backend} failed: {error_type}: {e}")
+
+            # Classify from error message
+            if "429" in error_msg or "rate" in error_msg:
+                outcome = SearchOutcome.RATE_LIMITED
+            elif "403" in error_msg or "blocked" in error_msg or "captcha" in error_msg:
+                outcome = SearchOutcome.BLOCKED
+            elif "timeout" in error_msg or "connect" in error_msg:
+                outcome = SearchOutcome.UPSTREAM_ERROR
+            else:
+                outcome = SearchOutcome.UPSTREAM_ERROR
+
             return [], {
-                "status": f"error:{error_type}",
+                "status": outcome.value,
+                "outcome": outcome,
                 "result_count": 0,
                 "elapsed_ms": elapsed,
+                "error": f"{error_type}: {e}",
             }
 
     @staticmethod

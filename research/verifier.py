@@ -14,6 +14,8 @@ from typing import Optional, Callable, Awaitable
 
 from ..retrieval.chunking import Passage
 
+from .utils import extract_json
+
 logger = logging.getLogger(__name__)
 
 ModelCallFn = Callable[[str, list[dict], int, Optional[str]], Awaitable[dict]]

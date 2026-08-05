@@ -145,6 +145,36 @@ class HtmlMetasearchProvider:
         return True
 
 
+
+    @staticmethod
+    def _probe_brave_status(query: str) -> Optional["SearchOutcome"]:
+        """Lightweight probe to check if Brave is actually rate-limiting us.
+
+        ddgs maps Brave 429 to generic "No results found" — we need to
+        disambiguate between genuine empty results and rate limits.
+        Only called when ddgs reports no results from Brave.
+        """
+        try:
+            import httpx
+            with httpx.Client(timeout=5, follow_redirects=False) as client:
+                resp = client.get(
+                    "https://search.brave.com/search",
+                    params={"q": query[:50]},
+                    headers={"User-Agent": "Mozilla/5.0 (compatible)"},
+                )
+                if resp.status_code == 429:
+                    logger.info("Brave probe confirmed 429 rate limit")
+                    return SearchOutcome.RATE_LIMITED
+                elif resp.status_code == 403:
+                    logger.info("Brave probe: 403 blocked")
+                    return SearchOutcome.BLOCKED
+                elif resp.status_code == 200:
+                    # Genuine empty or parser drift
+                    return None
+        except Exception:
+            pass
+        return None
+
     @staticmethod
     def _sync_search_ddg_fallback(
         query: str,
@@ -409,6 +439,9 @@ class HtmlMetasearchProvider:
             # Classify from error message
             if "429" in error_msg or "rate" in error_msg:
                 outcome = SearchOutcome.RATE_LIMITED
+            elif "no results" in error_msg and backend == "brave":
+                # ddgs swallows Brave's 429 as "No results found" — probe directly
+                outcome = self._probe_brave_status(query) or SearchOutcome.NO_RESULTS
             elif "403" in error_msg or "blocked" in error_msg or "captcha" in error_msg:
                 outcome = SearchOutcome.BLOCKED
             elif "timeout" in error_msg or "connect" in error_msg:

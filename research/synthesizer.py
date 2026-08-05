@@ -13,6 +13,8 @@ from typing import Optional, Callable, Awaitable
 
 from ..retrieval.chunking import Passage
 
+from .utils import extract_json
+
 logger = logging.getLogger(__name__)
 
 ModelCallFn = Callable[[str, list[dict], int, Optional[str]], Awaitable[dict]]
@@ -111,22 +113,20 @@ Synthesize a comprehensive answer with claim-level citations."""
 
     tokens = result.get("usage", {}).get("total_tokens", 0)
 
-    # Parse JSON response
+    # Parse JSON response — models often wrap JSON in code fences or preamble
     raw = result["text"].strip()
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        raw = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+    parsed = extract_json(raw)
 
-    try:
-        parsed = json.loads(raw)
+    if parsed and isinstance(parsed, dict) and "answer" in parsed:
         return SynthesisResult(
-            answer=parsed.get("answer", ""),
+            answer=parsed["answer"],
             claims=parsed.get("claims", []),
             unresolved_questions=parsed.get("unresolved_questions", []),
             tokens_used=tokens,
         )
-    except json.JSONDecodeError:
+    else:
         # Model returned free text — use it as the answer
+        logger.debug(f"Synthesis JSON extraction failed, using raw text ({len(raw)} chars)")
         return SynthesisResult(
             answer=raw,
             tokens_used=tokens,

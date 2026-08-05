@@ -12,6 +12,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional, Callable, Awaitable
 
+from .utils import extract_json
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,14 +80,16 @@ async def plan_research(
         logger.warning(f"Planner model error, using heuristic: {result['error']}")
         return _heuristic_plan(question, num_queries, depth)
 
-    # Parse response
+    # Parse response (robust JSON extraction)
     raw = result["text"].strip()
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        raw = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+    parsed = extract_json(raw)
+
+    if parsed is None:
+        logger.warning("Planner JSON extraction failed, using heuristic")
+        return _heuristic_plan(question, num_queries, depth)
 
     try:
-        parsed = json.loads(raw)
+        pass  # JSON already extracted by extract_json()
         queries = parsed.get("queries", [])
         reasoning = parsed.get("reasoning", "")
 

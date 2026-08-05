@@ -168,6 +168,7 @@ async def execute_research(
     if not all_results:
         run.error = "No search results found from any query."
         run.metrics = {"elapsed_ms": int((time.time() - start_time) * 1000)}
+        search_service.broker.release_budget(run.run_id)
         return run
 
     # ---------------------------------------------------------------
@@ -230,6 +231,7 @@ async def execute_research(
             "search_requests": len(search_responses),
             "pages_read": 0,
         }
+        search_service.broker.release_budget(run.run_id)
         return run
 
     # ---------------------------------------------------------------

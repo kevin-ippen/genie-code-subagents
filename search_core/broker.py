@@ -38,6 +38,64 @@ from .normalization import deduplicate_results, extract_domain
 logger = logging.getLogger(__name__)
 
 
+
+
+# ---------------------------------------------------------------------------
+# Token Bucket Rate Limiter
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TokenBucket:
+    """Async token bucket for rate-limiting provider requests.
+
+    Controls how frequently requests may START (complementary to semaphore
+    which controls how many are active concurrently).
+
+    Example: capacity=1, refill_rate=0.33 → one request every ~3 seconds.
+    """
+    capacity: int = 1
+    refill_rate: float = 0.5  # tokens per second
+    _tokens: float = field(init=False)
+    _last_refill: float = field(init=False)
+
+    def __post_init__(self):
+        self._tokens = float(self.capacity)
+        self._last_refill = time.time()
+
+    def _refill(self):
+        now = time.time()
+        elapsed = now - self._last_refill
+        self._tokens = min(self.capacity, self._tokens + elapsed * self.refill_rate)
+        self._last_refill = now
+
+    async def acquire(self, timeout: float = 10.0) -> bool:
+        """Wait for a token. Returns False if timeout exceeded."""
+        deadline = time.time() + timeout
+        while True:
+            self._refill()
+            if self._tokens >= 1.0:
+                self._tokens -= 1.0
+                return True
+            # Wait for next token
+            wait_time = (1.0 - self._tokens) / self.refill_rate
+            if time.time() + wait_time > deadline:
+                return False
+            await asyncio.sleep(min(wait_time, 0.5))
+
+    @property
+    def available(self) -> float:
+        self._refill()
+        return self._tokens
+
+
+# Default rate configs per provider tier
+PROVIDER_RATES = {
+    "brave": {"capacity": 1, "refill_rate": 0.4},      # ~1 req every 2.5s
+    "mojeek": {"capacity": 1, "refill_rate": 0.4},     # ~1 req every 2.5s
+    "duckduckgo": {"capacity": 1, "refill_rate": 0.25}, # ~1 req every 4s
+    "default": {"capacity": 1, "refill_rate": 0.33},    # ~1 req every 3s
+}
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -56,7 +114,13 @@ class ProviderSlot:
     name: str
     provider: object  # SearchProvider protocol
     semaphore: asyncio.Semaphore = field(default_factory=lambda: asyncio.Semaphore(1))
+    bucket: TokenBucket = field(default=None)
     tier: str = "primary"  # primary | secondary | emergency
+
+    def __post_init__(self):
+        if self.bucket is None:
+            rate_cfg = PROVIDER_RATES.get(self.name, PROVIDER_RATES["default"])
+            self.bucket = TokenBucket(**rate_cfg)
 
 
 @dataclass
@@ -288,7 +352,18 @@ class SearchBroker:
     # ------------------------------------------------------------------
 
     async def _call_provider(self, slot: ProviderSlot, request: SearchRequest) -> SearchResponse:
-        """Call a single provider, guarded by its semaphore."""
+        """Call a single provider, guarded by semaphore + token bucket."""
+        # Rate limit: wait for token (controls request frequency)
+        acquired = await slot.bucket.acquire(timeout=12.0)
+        if not acquired:
+            logger.warning(f"Provider '{slot.name}' rate limit timeout (no token in 12s)")
+            return SearchResponse(
+                query=request.query,
+                provider=slot.name,
+                error="Rate limit: provider busy (token bucket timeout).",
+            )
+
+        # Concurrency limit: wait for semaphore (controls parallel requests)
         async with slot.semaphore:
             try:
                 return await slot.provider.search(request)
@@ -347,6 +422,7 @@ class SearchBroker:
                 name: {
                     "tier": slot.tier,
                     "semaphore_available": slot.semaphore._value,
+                    "bucket_tokens": round(slot.bucket.available, 2),
                 }
                 for name, slot in self._providers.items()
             },

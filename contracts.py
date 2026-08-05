@@ -1,16 +1,18 @@
-"""Unified contracts for search and retrieval.
+"""Unified contracts for external search and retrieval.
 
 These protocols define the service boundary between orchestration logic
 and the underlying providers. No provider-specific behavior should leak
 above this layer.
 
+This module is explicitly for OPEN-WEB research — external discovery
+and page extraction. Local/trusted content search is a separate tool.
+
 Architecture:
-    SearchProvider  — discovery (find relevant content for a query)
+    SearchProvider  — discovery (find relevant external content for a query)
     DocumentReader  — retrieval (extract content from a known URL)
 
 Implementation map:
     SearchProvider
-    ├── LocalDeltaProvider       (governed trusted corpus)
     └── HtmlMetasearchProvider   (forked ddgs adapters, no API keys)
         ├── BraveHtmlAdapter
         ├── MojeekHtmlAdapter
@@ -27,13 +29,8 @@ Routing policy:
         → DocumentReader
 
     Discovery question?
-        → LocalDeltaProvider (trusted first)
-        → assess coverage
-        → HtmlMetasearchProvider (discovery/freshness)
+        → HtmlMetasearchProvider
         → DocumentReader for selected results
-
-    High-value external source?
-        → optional promotion into LocalDeltaProvider corpus
 """
 
 from __future__ import annotations
@@ -70,7 +67,6 @@ class SearchResult:
     published_at: Optional[str] = None
     score: Optional[float] = None
     provider: Optional[str] = None
-    trust_tier: Optional[str] = None  # "approved", "trusted", None (unknown)
     content_hash: Optional[str] = None
 
 
@@ -84,9 +80,7 @@ class SearchRequest:
     language: str = "en"
     include_domains: Optional[list[str]] = None
     exclude_domains: Optional[list[str]] = None
-    source_types: Optional[list[str]] = None  # For local: ["github", "docs", "arxiv"]
-    trust_tiers: Optional[list[str]] = None   # For local: ["approved", "trusted"]
-    retrieval_mode: str = "hybrid"            # "hybrid", "vector", "keyword"
+
 
 
 @dataclass
@@ -131,7 +125,7 @@ class ReadRequest:
     chunk_max_size: int = 1200
     chunk_overlap: int = 100
     use_cache: bool = True         # Check conditional headers
-    promote_to_corpus: bool = False # Offer to index in local provider
+
 
 
 @dataclass
@@ -170,7 +164,7 @@ class SearchProvider(Protocol):
 
     @property
     def name(self) -> str:
-        """Provider identifier (e.g. 'html_metasearch', 'local_delta')."""
+        """Provider identifier (e.g. 'html_metasearch')."""
         ...
 
     @property

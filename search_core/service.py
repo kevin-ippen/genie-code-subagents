@@ -17,7 +17,7 @@ from typing import Optional
 from .models import SearchRequest, SearchResponse
 from .normalization import deduplicate_results, extract_domain
 from .cache import SearchCache
-from .providers.duckduckgo import DDGSBrokerProvider
+from .providers.duckduckgo import HtmlMetasearchProvider
 from .providers.brave import BraveSearchProvider
 
 logger = logging.getLogger(__name__)
@@ -32,10 +32,10 @@ class SearchService:
         self._default_provider: Optional[str] = None
 
         # DuckDuckGo (always available — no API key, fully self-contained)
-        ddg = DDGSBrokerProvider()
-        self._providers["ddgs_broker"] = ddg
-        self._default_provider = "ddgs_broker"
-        logger.info("DDGS broker ready (brave+mojeek+ddg, no API keys)")
+        ddg = HtmlMetasearchProvider()
+        self._providers["html_metasearch"] = ddg
+        self._default_provider = "html_metasearch"
+        logger.info("HtmlMetasearchProvider ready (brave+mojeek+ddg, no API keys)")
 
         # Brave (optional upgrade if API key is set)
         brave = BraveSearchProvider()

@@ -115,7 +115,7 @@ _provider_health: dict[str, ProviderHealth] = defaultdict(ProviderHealth)
 # Provider implementation
 # ---------------------------------------------------------------------------
 
-class DDGSBrokerProvider:
+class HtmlMetasearchProvider:
     """Multi-engine search broker using ddgs named backends.
 
     No API keys. No external accounts. Fully self-contained.
@@ -125,7 +125,7 @@ class DDGSBrokerProvider:
 
     @property
     def name(self) -> str:
-        return "ddgs_broker"
+        return "html_metasearch"
 
     @property
     def is_available(self) -> bool:

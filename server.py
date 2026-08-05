@@ -611,11 +611,15 @@ TOOL_SCHEMAS = [
          "max_tokens": {"type": "integer", "description": "Max tokens per stage.", "default": 2048},
      }, "required": ["prompt"]}},
     {"name": "research",
-     "description": "Only invoke when the user says 'subagent' in their message. Multi-page research: visit pages, extract relevant facts, follow promising links, and synthesize findings. ASYNC: returns a task_id immediately.",
+     "description": "Only invoke when the user says 'subagent' in their message. Multi-page research: plan sub-queries, search multiple providers concurrently, read selected sources, synthesize with citations, and verify claims. ASYNC: returns a task_id immediately.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string", "description": "The research question or topic."},
          "start_urls": {"type": "array", "items": {"type": "string"}, "description": "URLs to start from.", "default": []},
-         "max_pages": {"type": "integer", "description": "Max pages to visit (1-10).", "default": 5},
+         "max_pages": {"type": "integer", "description": "Max pages to read (1-10).", "default": 5},
+         "depth": {"type": "string", "description": "Research depth: 'quick' (1-2 searches), 'standard' (3-4 searches), 'deep' (5-6 searches).", "default": "standard", "enum": ["quick", "standard", "deep"]},
+         "max_searches": {"type": "integer", "description": "Maximum number of search queries to execute (1-6).", "default": 4},
+         "freshness": {"type": "string", "description": "Prefer recent results: '24h', '7d', '30d', '1y', or null for any.", "default": None},
+         "include_domains": {"type": "array", "items": {"type": "string"}, "description": "Restrict search to these domains.", "default": None},
          "model": {"type": "string", "description": "Override default model.", "default": None},
      }, "required": ["query"]}},
     {"name": "crawl",
@@ -1119,9 +1123,11 @@ async def _do_research(task_id, query, start_urls, max_pages, model_override, us
         _fail_task(task_id, str(e))
 
 
-async def tool_research(query, start_urls=None, max_pages=5, model=None, **kw):
+async def tool_research(query, start_urls=None, max_pages=5, depth="standard",
+                        max_searches=4, freshness=None, include_domains=None, model=None, **kw):
     user_token = _current_user_token.get()
     max_pages = min(max(1, max_pages), 10)
+    max_searches = min(max(1, max_searches or 4), 6)
     start_urls = start_urls or []
     task_id = _create_task("research", query[:60])
 
@@ -1130,7 +1136,11 @@ async def tool_research(query, start_urls=None, max_pages=5, model=None, **kw):
         from search_core.service import get_search_service
         service = get_search_service()
         if service.is_available:
-            asyncio.create_task(_do_research_v2(task_id, query, max_pages, model))
+            asyncio.create_task(_do_research_v2(
+                task_id, query, max_pages, model,
+                depth=depth, max_searches=max_searches,
+                freshness=freshness, include_domains=include_domains,
+            ))
             return json.dumps({"task_id": task_id, "status": "running", "tool": "research", "engine": "v2"})
     except ImportError:
         pass
@@ -1140,15 +1150,19 @@ async def tool_research(query, start_urls=None, max_pages=5, model=None, **kw):
     return json.dumps({"task_id": task_id, "status": "running", "tool": "research", "engine": "legacy"})
 
 
-async def _do_research_v2(task_id: str, query: str, max_pages: int, model_override: str | None):
+async def _do_research_v2(task_id: str, query: str, max_pages: int, model_override: str | None,
+                         depth: str = "standard", max_searches: int = 4,
+                         freshness: str | None = None, include_domains: list | None = None):
     """V2 research using provider-backed search + structured retrieval."""
     try:
         from research.executor import execute_research, ResearchConfig
 
         config = ResearchConfig(
-            depth="standard" if max_pages >= 5 else "quick",
-            max_searches=min(max_pages, 6),
+            depth=depth,
+            max_searches=max_searches,
             max_pages_to_read=max_pages,
+            freshness=freshness,
+            include_domains=include_domains,
             model_override=model_override,
         )
 

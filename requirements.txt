@@ -4,6 +4,6 @@ openai>=1.40.0
 databricks-sdk>=0.30.0
 playwright==1.42.0
 httpx>=0.27.0
-# Pinned: fork/vendor when upstream breaks. Track deedy5/ddgs releases.
-# Current pin based on 2026-08-05 latest stable.
-ddgs==7.6.1
+# Pin ddgs: in-process metasearch substrate.
+# Fork/vendor when upstream breaks. Track deedy5/ddgs releases.
+ddgs==9.14.4

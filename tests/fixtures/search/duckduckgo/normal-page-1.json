@@ -1,0 +1,25 @@
+{
+  "backend": "duckduckgo",
+  "scenario": "normal-page-1",
+  "query": "open source deep research agent",
+  "captured_at": "2026-08-05T17:42:25.623232+00:00",
+  "upstream_ddgs_version": "9.14.4",
+  "request_url": "https://html.duckduckgo.com/html/",
+  "final_url": "https://html.duckduckgo.com/html/",
+  "status_code": 200,
+  "body_sha256": "809bb413619a592f404b38155eb6be468fc1eb608f674495313093c42b1e3a34",
+  "body_length": 30402,
+  "elapsed_ms": 68,
+  "parsed_result_count": 0,
+  "error": "DDGSException: No results found.",
+  "expected": {
+    "outcome": "parser_drift",
+    "minimum_results": 0,
+    "required_fields": [
+      "title",
+      "url"
+    ],
+    "minimum_results_if_fixed": 5
+  },
+  "_note": "DDG HTML contains 10 result__a + 10 result__snippet elements. ddgs 9.14.4 DuckDuckGo adapter failed to extract them. This fixture proves parser drift: the data is present, the parser missed it."
+}

@@ -335,7 +335,6 @@ class HtmlMetasearchProvider:
         """Synchronous ddgs call (runs in thread executor)."""
         with DDGS(timeout=8) as ddgs:
             kwargs = {
-                "keywords": query,
                 "backend": backend,
                 "region": "us-en",
                 "safesearch": "moderate",
@@ -345,9 +344,9 @@ class HtmlMetasearchProvider:
                 kwargs["timelimit"] = timelimit
 
             if is_news:
-                return list(ddgs.news(**kwargs))
+                return list(ddgs.news(query, **kwargs))
             else:
-                return list(ddgs.text(**kwargs))
+                return list(ddgs.text(query, **kwargs))
 
     # ------------------------------------------------------------------
     # Reciprocal Rank Fusion

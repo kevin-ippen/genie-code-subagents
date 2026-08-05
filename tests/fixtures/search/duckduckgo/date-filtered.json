@@ -1,0 +1,25 @@
+{
+  "backend": "duckduckgo",
+  "scenario": "date-filtered",
+  "query": "databricks agent evaluation 2026",
+  "captured_at": "2026-08-05T17:42:54.135691+00:00",
+  "upstream_ddgs_version": "9.14.4",
+  "request_url": "https://html.duckduckgo.com/html/",
+  "final_url": "https://html.duckduckgo.com/html/",
+  "status_code": 200,
+  "body_sha256": "f613944516e1a2e9326893bba0c670a6ede7628424f727e06aba240f02175a86",
+  "body_length": 30539,
+  "elapsed_ms": 84,
+  "parsed_result_count": 0,
+  "error": "DDGSException: No results found.",
+  "expected": {
+    "outcome": "parser_drift",
+    "minimum_results": 0,
+    "required_fields": [
+      "title",
+      "url"
+    ],
+    "minimum_results_if_fixed": 5
+  },
+  "_note": "DDG HTML contains 10 result__a + 10 result__snippet elements. ddgs 9.14.4 DuckDuckGo adapter failed to extract them. This fixture proves parser drift: the data is present, the parser missed it."
+}

@@ -16,6 +16,8 @@ from typing import Optional
 
 from .models import SearchRequest, SearchResponse
 from .normalization import deduplicate_results, extract_domain
+from .cache import SearchCache
+from .providers.duckduckgo import DDGSBrokerProvider
 from .providers.brave import BraveSearchProvider
 
 logger = logging.getLogger(__name__)
@@ -29,20 +31,18 @@ class SearchService:
         self._providers = {}
         self._default_provider: Optional[str] = None
 
-        # Brave (primary)
+        # DuckDuckGo (always available — no API key, fully self-contained)
+        ddg = DDGSBrokerProvider()
+        self._providers["ddgs_broker"] = ddg
+        self._default_provider = "ddgs_broker"
+        logger.info("DDGS broker ready (brave+mojeek+ddg, no API keys)")
+
+        # Brave (optional upgrade if API key is set)
         brave = BraveSearchProvider()
         if brave.is_available:
             self._providers["brave"] = brave
-            self._default_provider = "brave"
-            logger.info("Brave Search provider configured")
-
-        # Future: Exa, SearXNG, etc.
-        # exa = ExaSearchProvider()
-        # if exa.is_available:
-        #     self._providers["exa"] = exa
-
-        if not self._providers:
-            logger.warning("No search providers configured. Set BRAVE_SEARCH_API_KEY to enable search.")
+            self._default_provider = "brave"  # Prefer Brave when available
+            logger.info("Brave Search provider configured (upgrade)")
 
     @property
     def available_providers(self) -> list[str]:
@@ -59,6 +59,12 @@ class SearchService:
         - "auto": Use the best provider for the request type
         - Specific name: Use that provider or error
         """
+        # Check cache first
+        cached = self._cache.get(request)
+        if cached is not None:
+            logger.debug(f"Cache hit for: {request.query[:50]}")
+            return cached
+
         provider = self._select_provider(request)
         if not provider:
             return SearchResponse(
@@ -81,6 +87,10 @@ class SearchService:
                 result.rank = i
                 if not result.domain:
                     result.domain = extract_domain(result.url)
+
+        # Cache successful responses
+        if response.ok:
+            self._cache.put(request, response)
 
         return response
 
@@ -122,7 +132,7 @@ class SearchService:
         if request.provider != "auto" and request.provider not in self._providers:
             available = ", ".join(self._providers.keys()) if self._providers else "none"
             return f"Provider '{request.provider}' not available. Configured: [{available}]"
-        return "No search providers configured. Set BRAVE_SEARCH_API_KEY environment variable."
+        return "No search providers available."
 
     @staticmethod
     def _enforce_domain_diversity(results: list, max_per_domain: int = 3) -> list:

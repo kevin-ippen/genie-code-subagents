@@ -150,13 +150,19 @@ class HtmlMetasearchProvider:
         query: str,
         max_results: int = 10,
         timelimit: str | None = None,
+        max_retries: int = 3,
     ) -> list[dict]:
         """Fallback: direct HTTP to DDG HTML endpoint + vendored parser.
 
         Used when ddgs adapter fails (parser drift confirmed in 9.14.4).
         Exercises the same endpoint but uses our own extraction.
+
+        Retries with exponential backoff on HTTP 202 (DDG's soft rate-limit
+        signal — means "accepted but not ready, slow down"). Backs off
+        1s → 2s → 4s before giving up.
         """
         import httpx
+        from time import sleep
 
         headers = {
             "User-Agent": (
@@ -171,10 +177,44 @@ class HtmlMetasearchProvider:
         if timelimit:
             data["df"] = timelimit
 
-        with httpx.Client(timeout=10, follow_redirects=True, headers=headers) as client:
-            resp = client.post("https://html.duckduckgo.com/html/", data=data)
-            resp.raise_for_status()
-            return _vendored_ddg_parse(resp.text, max_results=max_results)
+        last_status = None
+        with httpx.Client(timeout=12, follow_redirects=True, headers=headers) as client:
+            for attempt in range(max_retries):
+                resp = client.post("https://html.duckduckgo.com/html/", data=data)
+                last_status = resp.status_code
+
+                if resp.status_code == 200:
+                    results = _vendored_ddg_parse(resp.text, max_results=max_results)
+                    if results:
+                        return results
+                    # 200 but empty parse — might be challenge page, don't retry
+                    logger.debug("DDG fallback: 200 but parser returned empty")
+                    return []
+
+                if resp.status_code == 202:
+                    # Soft rate-limit: back off and retry
+                    backoff = 2 ** attempt  # 1s, 2s, 4s
+                    logger.debug(
+                        f"DDG fallback: 202 on attempt {attempt + 1}/{max_retries}, "
+                        f"backing off {backoff}s"
+                    )
+                    sleep(backoff)
+                    continue
+
+                if resp.status_code == 429:
+                    # Hard rate-limit — don't retry, will just get 429 again
+                    logger.warning("DDG fallback: 429 rate limited")
+                    return []
+
+                # Other error codes — raise
+                resp.raise_for_status()
+
+        # Exhausted retries (all 202s)
+        logger.warning(
+            f"DDG fallback: exhausted {max_retries} retries "
+            f"(last status={last_status})"
+        )
+        return []
 
 
 

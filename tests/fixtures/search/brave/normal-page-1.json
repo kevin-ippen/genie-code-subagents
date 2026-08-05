@@ -1,0 +1,23 @@
+{
+  "backend": "brave",
+  "scenario": "normal-page-1",
+  "query": "open source deep research agent",
+  "captured_at": "2026-08-05T17:42:00.477425+00:00",
+  "upstream_ddgs_version": "9.14.4",
+  "request_url": "https://search.brave.com/search",
+  "final_url": "https://search.brave.com/search?q=open+source+deep+research+agent",
+  "status_code": 429,
+  "body_sha256": "8d594089c2f9d18dccde0511cfcdfe763e5ceab672f70ea1fd01af64af016e30",
+  "body_length": 73351,
+  "elapsed_ms": 266,
+  "parsed_result_count": 10,
+  "error": null,
+  "expected": {
+    "outcome": "ok",
+    "minimum_results": 8,
+    "required_fields": [
+      "title",
+      "url"
+    ]
+  }
+}

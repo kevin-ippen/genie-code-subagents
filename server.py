@@ -130,6 +130,8 @@ DEFAULT_ROUTING: dict[str, str] = {
     "cascade_powerful": "gemini-pro",
     "research_extract": "gemini-flash",
     "research_synthesize": "gemini-flash",
+    "research_planner": "gemini-flash",
+    "research_verifier": "gemini-flash",
 }
 
 for key in list(MODEL_REGISTRY.keys()):
@@ -462,7 +464,8 @@ async def _run_browser_session(url: str, user_token: str, task_fn, viewport_w=12
             browser = await pw.chromium.launch(headless=True,
                 args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
             ctx_opts = {"viewport": {"width": viewport_w, "height": viewport_h}}
-            if effective_token:
+            # SECURITY: Only forward bearer tokens to Databricks-controlled domains
+            if effective_token and _is_databricks_app_url(url):
                 ctx_opts["extra_http_headers"] = {"Authorization": f"Bearer {effective_token}"}
             context = await browser.new_context(**ctx_opts)
             if pre_auth_cookies:
@@ -608,11 +611,15 @@ TOOL_SCHEMAS = [
          "max_tokens": {"type": "integer", "description": "Max tokens per stage.", "default": 2048},
      }, "required": ["prompt"]}},
     {"name": "research",
-     "description": "Only invoke when the user says 'subagent' in their message. Multi-page research: visit pages, extract relevant facts, follow promising links, and synthesize findings. ASYNC: returns a task_id immediately.",
+     "description": "Only invoke when the user says 'subagent' in their message. Multi-page research: plan sub-queries, search multiple providers concurrently, read selected sources, synthesize with citations, and verify claims. ASYNC: returns a task_id immediately.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string", "description": "The research question or topic."},
          "start_urls": {"type": "array", "items": {"type": "string"}, "description": "URLs to start from.", "default": []},
-         "max_pages": {"type": "integer", "description": "Max pages to visit (1-10).", "default": 5},
+         "max_pages": {"type": "integer", "description": "Max pages to read (1-10).", "default": 5},
+         "depth": {"type": "string", "description": "Research depth: 'quick' (1-2 searches), 'standard' (3-4 searches), 'deep' (5-6 searches).", "default": "standard", "enum": ["quick", "standard", "deep"]},
+         "max_searches": {"type": "integer", "description": "Maximum number of search queries to execute (1-6).", "default": 4},
+         "freshness": {"type": "string", "description": "Prefer recent results: '24h', '7d', '30d', '1y', or null for any.", "default": None},
+         "include_domains": {"type": "array", "items": {"type": "string"}, "description": "Restrict search to these domains.", "default": None},
          "model": {"type": "string", "description": "Override default model.", "default": None},
      }, "required": ["query"]}},
     {"name": "crawl",
@@ -1116,13 +1123,63 @@ async def _do_research(task_id, query, start_urls, max_pages, model_override, us
         _fail_task(task_id, str(e))
 
 
-async def tool_research(query, start_urls=None, max_pages=5, model=None, **kw):
+async def tool_research(query, start_urls=None, max_pages=5, depth="standard",
+                        max_searches=4, freshness=None, include_domains=None, model=None, **kw):
     user_token = _current_user_token.get()
     max_pages = min(max(1, max_pages), 10)
+    max_searches = min(max(1, max_searches or 4), 6)
     start_urls = start_urls or []
     task_id = _create_task("research", query[:60])
+
+    # Try new provider-backed research orchestrator first
+    try:
+        from search_core.service import get_search_service
+        service = get_search_service()
+        if service.is_available:
+            asyncio.create_task(_do_research_v2(
+                task_id, query, max_pages, model,
+                depth=depth, max_searches=max_searches,
+                freshness=freshness, include_domains=include_domains,
+            ))
+            return json.dumps({"task_id": task_id, "status": "running", "tool": "research", "engine": "v2"})
+    except ImportError:
+        pass
+
+    # Fallback to legacy browser-based research
     asyncio.create_task(_do_research(task_id, query, start_urls, max_pages, model, user_token))
-    return json.dumps({"task_id": task_id, "status": "running", "tool": "research"})
+    return json.dumps({"task_id": task_id, "status": "running", "tool": "research", "engine": "legacy"})
+
+
+async def _do_research_v2(task_id: str, query: str, max_pages: int, model_override: str | None,
+                         depth: str = "standard", max_searches: int = 4,
+                         freshness: str | None = None, include_domains: list | None = None):
+    """V2 research using provider-backed search + structured retrieval."""
+    try:
+        from research.executor import execute_research, ResearchConfig
+
+        config = ResearchConfig(
+            depth=depth,
+            max_searches=max_searches,
+            max_pages_to_read=max_pages,
+            freshness=freshness,
+            include_domains=include_domains,
+            model_override=model_override,
+        )
+
+        # Wrap _call_model for the research orchestrator
+        async def model_call(role, messages, max_tokens, override):
+            return await _call_model(role, messages, max_tokens=max_tokens, override=override)
+
+        result = await execute_research(query, config, model_call=model_call)
+
+        _complete_task(
+            task_id,
+            json.dumps(result.to_dict(), indent=2),
+            model_used=model_override or "gemini-flash",
+            tokens=result.metrics.get("model_tokens", 0),
+        )
+    except Exception as e:
+        _fail_task(task_id, f"Research v2 error: {e}")
 
 
 
@@ -1581,60 +1638,30 @@ Be specific. Reference exact elements, positions, values. If inputs are identica
 # --- SEARCH TOOL ---
 
 async def _do_search(task_id: str, query: str, num_results: int, model_override: str | None, user_token: str):
-    """Web search: try native grounding first, fallback to browser-based search."""
+    """Web search: deterministic provider-backed search (Brave, etc)."""
     try:
-        # Strategy 1: Use model with native web search grounding
-        # Gemini and GPT support grounding/search via their native capabilities
-        # We ask the model to search and synthesize — if the endpoint supports grounding,
-        # the response will include real web data
-        search_system = """You have access to web search. Search for the query and provide:
-1. A list of the top results with title, URL, and a brief snippet
-2. A synthesis paragraph summarizing the key findings
-
-Format your response as JSON:
-{
-  "results": [{"title": "...", "url": "...", "snippet": "..."}],
-  "synthesis": "...",
-  "sources_used": true
-}
-
-If you cannot actually search the web (no grounding available), respond with:
-{"results": [], "synthesis": "", "sources_used": false, "error": "no_grounding"}"""
-
-        messages = [
-            {"role": "system", "content": search_system},
-            {"role": "user", "content": f"Search for: {query}\n\nReturn up to {num_results} results."},
-        ]
-        result = await _call_model("analyze", messages, max_tokens=2048, override=model_override)
-
-        if result.get("error"):
-            # Strategy 2: Fallback to browser-based search
-            await _browser_search_fallback(task_id, query, num_results, user_token, model_override)
-            return
-
-        raw = result["text"].strip()
-        # Try to parse JSON response
-        if raw.startswith("```"):
-            lines = raw.split("\n")
-            raw = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+        # Try the new provider-backed search service
         try:
-            parsed = json.loads(raw)
-            if parsed.get("sources_used") == False or parsed.get("error") == "no_grounding":
-                # Model couldn't actually search — fallback to browser
-                await _browser_search_fallback(task_id, query, num_results, user_token, model_override)
-                return
-            # Success with native grounding
-            parsed["method"] = "native_grounding"
-            parsed["model"] = result.get("model")
-            parsed["query"] = query
-            _complete_task(task_id, json.dumps(parsed, indent=2),
-                          model_used=result.get("model", ""), tokens=result.get("usage", {}).get("total_tokens", 0))
-        except json.JSONDecodeError:
-            # Model returned free text — wrap it
-            output = {"query": query, "method": "native_grounding", "model": result.get("model"),
-                      "results": [], "synthesis": raw, "sources_used": True}
-            _complete_task(task_id, json.dumps(output, indent=2),
-                          model_used=result.get("model", ""), tokens=result.get("usage", {}).get("total_tokens", 0))
+            from search_core.service import get_search_service
+            from search_core.models import SearchRequest
+            service = get_search_service()
+            if service.is_available:
+                request = SearchRequest(query=query, num_results=num_results)
+                response = await service.search(request)
+                if response.ok:
+                    output = response.to_dict()
+                    output["method"] = "provider"
+                    _complete_task(task_id, json.dumps(output, indent=2),
+                                  model_used=response.provider, tokens=0)
+                    return
+                elif response.error:
+                    logger.warning(f"Search provider error: {response.error}")
+                    # Fall through to browser fallback
+        except ImportError:
+            logger.info("search_core not available, using browser fallback")
+
+        # Fallback: browser-based search
+        await _browser_search_fallback(task_id, query, num_results, user_token, model_override)
 
     except Exception as e:
         _fail_task(task_id, str(e))
@@ -1688,30 +1715,34 @@ async def tool_search(query: str, num_results: int = 5, model: str = None, **kw)
 
 
 
-# --- SECURITY BLOCKLIST FOR FETCH ---
-_BLOCKED_HOSTS = frozenset(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"])
-_BLOCKED_PREFIXES = ("169.254.", "10.", "192.168.", "172.16.", "172.17.", "172.18.", "172.19.",
-                     "172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.", "172.26.",
-                     "172.27.", "172.28.", "172.29.", "172.30.", "172.31.")
-_BLOCKED_PATH_PATTERNS = ("/api/2.0/", "/api/2.1/", "/serving-endpoints/")
-
-
-def _is_url_blocked(url: str) -> str | None:
-    """Check if URL should be blocked. Returns reason string or None if allowed."""
-    from urllib.parse import urlparse
-    try:
-        parsed = urlparse(url)
-    except Exception:
-        return "Invalid URL"
-    host = (parsed.hostname or "").lower()
-    if host in _BLOCKED_HOSTS:
-        return f"Blocked host: {host}"
-    if any(host.startswith(p) for p in _BLOCKED_PREFIXES):
-        return f"Blocked private IP: {host}"
-    path = parsed.path or ""
-    if any(pat in path for pat in _BLOCKED_PATH_PATTERNS):
-        return f"Blocked Databricks API path: {path}"
-    return None
+# --- URL SECURITY (delegated to security module) ---
+try:
+    from security.urls import is_url_safe
+    def _is_url_blocked(url: str) -> str | None:
+        safe, reason = is_url_safe(url, resolve_dns=True)
+        return None if safe else reason
+except ImportError:
+    # Fallback if security module not importable (e.g. during initial setup)
+    _BLOCKED_HOSTS = frozenset(["localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"])
+    _BLOCKED_PREFIXES = ("169.254.", "10.", "192.168.", "172.16.", "172.17.", "172.18.", "172.19.",
+                         "172.20.", "172.21.", "172.22.", "172.23.", "172.24.", "172.25.", "172.26.",
+                         "172.27.", "172.28.", "172.29.", "172.30.", "172.31.")
+    _BLOCKED_PATH_PATTERNS = ("/api/2.0/", "/api/2.1/", "/serving-endpoints/")
+    def _is_url_blocked(url: str) -> str | None:
+        from urllib.parse import urlparse
+        try:
+            parsed = urlparse(url)
+        except Exception:
+            return "Invalid URL"
+        host = (parsed.hostname or "").lower()
+        if host in _BLOCKED_HOSTS:
+            return f"Blocked host: {host}"
+        if any(host.startswith(p) for p in _BLOCKED_PREFIXES):
+            return f"Blocked private IP: {host}"
+        path = parsed.path or ""
+        if any(pat in path for pat in _BLOCKED_PATH_PATTERNS):
+            return f"Blocked Databricks API path: {path}"
+        return None
 
 
 async def tool_fetch(url: str, method: str = "GET", headers: dict = None,

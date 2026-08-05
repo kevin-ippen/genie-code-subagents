@@ -1,0 +1,23 @@
+{
+  "backend": "brave",
+  "scenario": "date-filtered",
+  "query": "databricks agent evaluation 2026",
+  "captured_at": "2026-08-05T17:42:53.234901+00:00",
+  "upstream_ddgs_version": "9.14.4",
+  "request_url": "https://search.brave.com/search",
+  "final_url": "https://search.brave.com/search?q=databricks+agent+evaluation+2026&tf=pw",
+  "status_code": 200,
+  "body_sha256": "e36cb59eeb9e6b1f71ea82771563bedc020865e7added1c62730bf30ce39a983",
+  "body_length": 254913,
+  "elapsed_ms": 578,
+  "parsed_result_count": 10,
+  "error": null,
+  "expected": {
+    "outcome": "ok",
+    "minimum_results": 8,
+    "required_fields": [
+      "title",
+      "url"
+    ]
+  }
+}

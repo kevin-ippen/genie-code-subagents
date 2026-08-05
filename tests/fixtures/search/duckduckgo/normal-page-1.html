@@ -1,0 +1,642 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<!--[if IE 6]><html class="ie6" xmlns="http://www.w3.org/1999/xhtml"><![endif]-->
+<!--[if IE 7]><html class="lt-ie8 lt-ie9" xmlns="http://www.w3.org/1999/xhtml"><![endif]-->
+<!--[if IE 8]><html class="lt-ie9" xmlns="http://www.w3.org/1999/xhtml"><![endif]-->
+<!--[if gt IE 8]><!--><html xmlns="http://www.w3.org/1999/xhtml"><!--<![endif]-->
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=1" />
+  <meta name="referrer" content="origin" />
+  <meta name="HandheldFriendly" content="true" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>open source deep research agent at DuckDuckGo</title>
+  <link title="DuckDuckGo (HTML)" type="application/opensearchdescription+xml" rel="search" href="//duckduckgo.com/opensearch_html_v2.xml" />
+  <link href="//duckduckgo.com/favicon.ico" rel="shortcut icon" />
+  <link rel="icon" href="//duckduckgo.com/favicon.ico" type="image/x-icon" />
+  <link id="icon60" rel="apple-touch-icon" href="//duckduckgo.com/assets/icons/meta/DDG-iOS-icon_60x60.png?v=2"/>
+  <link id="icon76" rel="apple-touch-icon" sizes="76x76" href="//duckduckgo.com/assets/icons/meta/DDG-iOS-icon_76x76.png?v=2"/>
+  <link id="icon120" rel="apple-touch-icon" sizes="120x120" href="//duckduckgo.com/assets/icons/meta/DDG-iOS-icon_120x120.png?v=2"/>
+  <link id="icon152" rel="apple-touch-icon" sizes="152x152" href="//duckduckgo.com/assets/icons/meta/DDG-iOS-icon_152x152.png?v=2"/>
+  <link rel="image_src" href="//duckduckgo.com/assets/icons/meta/DDG-icon_256x256.png">
+  <link rel="stylesheet" media="handheld, all" href="//duckduckgo.com/dist/h.238c80a7d9b754cfcdd5.css" type="text/css"/>
+</head>
+
+<body class="body--html">
+  <a name="top" id="top"></a>
+
+  <form action="/html/" method="post">
+    <input type="text" name="state_hidden" id="state_hidden" />
+  </form>
+
+  <div>
+    <div class="site-wrapper-border"></div>
+
+    <div id="header" class="header cw header--html">
+      <a title="DuckDuckGo" href="/html/" class="header__logo-wrap"></a>
+
+      <form name="x" class="header__form" action="/html/" method="post">
+        <div class="search search--header">
+          <input name="q" autocomplete="off" class="search__input" id="search_form_input_homepage" type="text" value="open source deep research agent" />
+          <input name="b" id="search_button_homepage" class="search__button search__button--html" value="" title="Search" alt="Search" type="submit" />
+        </div>
+
+        
+        
+        
+        
+
+        <div class="frm__select">
+          <select name="kl">
+            
+              <option value="" >All Regions</option>
+            
+              <option value="ar-es" >Argentina</option>
+            
+              <option value="au-en" >Australia</option>
+            
+              <option value="at-de" >Austria</option>
+            
+              <option value="be-fr" >Belgium (fr)</option>
+            
+              <option value="be-nl" >Belgium (nl)</option>
+            
+              <option value="br-pt" >Brazil</option>
+            
+              <option value="bg-bg" >Bulgaria</option>
+            
+              <option value="ca-en" >Canada (en)</option>
+            
+              <option value="ca-fr" >Canada (fr)</option>
+            
+              <option value="ct-ca" >Catalonia</option>
+            
+              <option value="cl-es" >Chile</option>
+            
+              <option value="cn-zh" >China</option>
+            
+              <option value="co-es" >Colombia</option>
+            
+              <option value="hr-hr" >Croatia</option>
+            
+              <option value="cz-cs" >Czech Republic</option>
+            
+              <option value="dk-da" >Denmark</option>
+            
+              <option value="ee-et" >Estonia</option>
+            
+              <option value="fi-fi" >Finland</option>
+            
+              <option value="fr-fr" >France</option>
+            
+              <option value="de-de" >Germany</option>
+            
+              <option value="gr-el" >Greece</option>
+            
+              <option value="hk-tzh" >Hong Kong</option>
+            
+              <option value="hu-hu" >Hungary</option>
+            
+              <option value="is-is" >Iceland</option>
+            
+              <option value="in-en" >India (en)</option>
+            
+              <option value="id-en" >Indonesia (en)</option>
+            
+              <option value="ie-en" >Ireland</option>
+            
+              <option value="il-en" >Israel (en)</option>
+            
+              <option value="it-it" >Italy</option>
+            
+              <option value="jp-jp" >Japan</option>
+            
+              <option value="kr-kr" >Korea</option>
+            
+              <option value="lv-lv" >Latvia</option>
+            
+              <option value="lt-lt" >Lithuania</option>
+            
+              <option value="my-en" >Malaysia (en)</option>
+            
+              <option value="mx-es" >Mexico</option>
+            
+              <option value="nl-nl" >Netherlands</option>
+            
+              <option value="nz-en" >New Zealand</option>
+            
+              <option value="no-no" >Norway</option>
+            
+              <option value="pk-en" >Pakistan (en)</option>
+            
+              <option value="pe-es" >Peru</option>
+            
+              <option value="ph-en" >Philippines (en)</option>
+            
+              <option value="pl-pl" >Poland</option>
+            
+              <option value="pt-pt" >Portugal</option>
+            
+              <option value="ro-ro" >Romania</option>
+            
+              <option value="ru-ru" >Russia</option>
+            
+              <option value="xa-ar" >Saudi Arabia</option>
+            
+              <option value="sg-en" >Singapore</option>
+            
+              <option value="sk-sk" >Slovakia</option>
+            
+              <option value="sl-sl" >Slovenia</option>
+            
+              <option value="za-en" >South Africa</option>
+            
+              <option value="es-ca" >Spain (ca)</option>
+            
+              <option value="es-es" >Spain (es)</option>
+            
+              <option value="se-sv" >Sweden</option>
+            
+              <option value="ch-de" >Switzerland (de)</option>
+            
+              <option value="ch-fr" >Switzerland (fr)</option>
+            
+              <option value="tw-tzh" >Taiwan</option>
+            
+              <option value="th-en" >Thailand (en)</option>
+            
+              <option value="tr-tr" >Turkey</option>
+            
+              <option value="us-en" >US (English)</option>
+            
+              <option value="us-es" >US (Spanish)</option>
+            
+              <option value="ua-uk" >Ukraine</option>
+            
+              <option value="uk-en" >United Kingdom</option>
+            
+              <option value="vn-en" >Vietnam (en)</option>
+            
+          </select>
+        </div>
+
+        <div class="frm__select frm__select--last">
+          <select class="" name="df">
+            
+              <option value="" selected>Any Time</option>
+            
+              <option value="d" >Past Day</option>
+            
+              <option value="w" >Past Week</option>
+            
+              <option value="m" >Past Month</option>
+            
+              <option value="y" >Past Year</option>
+            
+          </select>
+        </div>
+      </form>
+    </div>
+
+    
+
+    
+      <!-- Web results are present -->
+      <div>
+        <div class="serp__results">
+          <div id="links" class="results">
+            
+
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://github.com/dzhng/deep-research">Open Deep Research - GitHub</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://github.com/dzhng/deep-research">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/github.com.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://github.com/dzhng/deep-research">
+                            github.com/dzhng/deep-research
+                          </a>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://github.com/dzhng/deep-research">An AI-powered <b>research</b> assistant that performs iterative, <b>deep</b> <b>research</b> on any topic by combining search engines, web scraping, and large language models. The goal of this repo is to provide the simplest implementation of a <b>deep</b> <b>research</b> <b>agent</b> - e.g. an <b>agent</b> that can refine its <b>research</b> direction over time and <b>deep</b> dive into a topic.</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://github.com/langchain-ai/open_deep_research">GitHub - langchain-ai/open_deep_research</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://github.com/langchain-ai/open_deep_research">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/github.com.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://github.com/langchain-ai/open_deep_research">
+                            github.com/langchain-ai/open_deep_research
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2025-07-30T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://github.com/langchain-ai/open_deep_research"><b>Deep</b> <b>research</b> has broken out as one of the most popular <b>agent</b> applications. This is a simple, configurable, fully <b>open</b> <b>source</b> <b>deep</b> <b>research</b> <b>agent</b> that works across many model providers, search tools, and MCP servers. It&#x27;s performance is on par with many popular <b>deep</b> <b>research</b> <b>agents</b> (see <b>Deep</b> <b>Research</b> Bench leaderboard).</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://huggingface.co/blog/open-deep-research">Open-source DeepResearch - Freeing our search agents</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://huggingface.co/blog/open-deep-research">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/huggingface.co.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://huggingface.co/blog/open-deep-research">
+                            huggingface.co/blog/open-deep-research
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2025-02-04T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://huggingface.co/blog/open-deep-research">We&#x27;re on a journey to advance and democratize artificial intelligence through <b>open</b> <b>source</b> and <b>open</b> science.</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://blog.gatsbi.com/wordsmith/best-open-source-ai-research-agents/">Best Open-Source AI Research Agents in 2026 - blog.gatsbi.com</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://blog.gatsbi.com/wordsmith/best-open-source-ai-research-agents/">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/blog.gatsbi.com.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://blog.gatsbi.com/wordsmith/best-open-source-ai-research-agents/">
+                            blog.gatsbi.com/wordsmith/best-open-source-ai-research-agents/
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2026-06-13T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://blog.gatsbi.com/wordsmith/best-open-source-ai-research-agents/">Compare the best <b>open-source</b> AI <b>research</b> <b>agents</b> for literature review, <b>deep</b> <b>research</b>, experiments, and paper drafting.</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://medium.com/@leucopsis/open-source-deep-research-ai-assistants-157462a59c14">Open‑Source &quot;Deep Research&quot; AI Assistants - Medium</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://medium.com/@leucopsis/open-source-deep-research-ai-assistants-157462a59c14">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/medium.com.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://medium.com/@leucopsis/open-source-deep-research-ai-assistants-157462a59c14">
+                            medium.com/@leucopsis/open-source-deep-research-ai-assistants-157462a59c14
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2025-09-03T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://medium.com/@leucopsis/open-source-deep-research-ai-assistants-157462a59c14">LangChain&#x27;s <b>Open</b> <b>Deep</b> <b>Research</b> One of the most prominent projects is <b>Open</b> <b>Deep</b> <b>Research</b>, an <b>open-source</b> <b>agent</b> developed by the LangChain team (originally inspired by a prototype from developer ...</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://www.feynman.is/">Feynman — The open source AI research agent</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://www.feynman.is/">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/www.feynman.is.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://www.feynman.is/">
+                            www.feynman.is
+                          </a>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://www.feynman.is/">The <b>open</b> <b>source</b> AI <b>research</b> <b>agent</b> Reads papers, searches the web, writes <b>research</b> drafts, plans experiments, and cites <b>research</b> claims. Use it from the terminal or <b>open</b> the local science workbench for chat, artifacts, notebooks, compute, and provenance. Made by Companion</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://osrepos.com/repo/langchain-ai-open_deep_research">Open Deep Research: A Configurable Open-Source Deep Research Agent ...</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://osrepos.com/repo/langchain-ai-open_deep_research">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/osrepos.com.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://osrepos.com/repo/langchain-ai-open_deep_research">
+                            osrepos.com/repo/langchain-ai-open_deep_research
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2026-05-15T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://osrepos.com/repo/langchain-ai-open_deep_research"><b>Open</b> <b>Deep</b> <b>Research</b> is a fully <b>open-source</b>, configurable <b>agent</b> designed for <b>deep</b> <b>research</b> applications. It supports various model providers, search tools, and Model Context Protocol (MCP) servers, offering performance comparable to other popular <b>deep</b> <b>research</b> <b>agents</b>. Developed by LangChain, it leverages LangGraph for robust <b>agent</b> orchestration and provides extensive customization options.</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://weaxsey.org/en/articles/2025-03-06/">A Survey of Open Source DeepResearch Implementation Solutions</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://weaxsey.org/en/articles/2025-03-06/">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/weaxsey.org.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://weaxsey.org/en/articles/2025-03-06/">
+                            weaxsey.org/en/articles/2025-03-06/
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2025-03-06T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://weaxsey.org/en/articles/2025-03-06/"><b>Deep</b> <b>Research</b> is a <b>research</b>-oriented <b>Agent</b> AI based on the o3 model, launched by OpenAI on February 2nd. According to OpenAI, users only need to provide a prompt, and the <b>Agent</b> will produce a <b>research</b> report like a researcher or analyst would. If the user&#x27;s <b>research</b> details are not clear enough, the model will prompt the user to clarify the details; if the user&#x27;s question is sufficiently ...</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://sambanova.ai/blog/open-source-deep-research-agents">Open-Source Deep Research Agents: Enterprise-Grade Speed, Security ...</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://sambanova.ai/blog/open-source-deep-research-agents">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/sambanova.ai.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://sambanova.ai/blog/open-source-deep-research-agents">
+                            sambanova.ai/blog/open-source-deep-research-agents
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2025-03-10T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://sambanova.ai/blog/open-source-deep-research-agents">The framework by default comes with three <b>agents</b>: A general search <b>agent</b>, a <b>Deep</b> <b>Research</b> <b>agent</b>, and a Financial Analyst. Because the framework is <b>open</b>-sourced, anyone can add additional <b>agents</b> that are connected to their own data <b>source</b> as well.</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+              
+                <div class="result results_links results_links_deep web-result ">
+                  <div class="links_main links_deep result__body"> <!-- This is the visible part -->
+                    
+                      <h2 class="result__title">
+                        <a rel="nofollow" class="result__a" href="https://tongyi-agent.github.io/blog/introducing-tongyi-deep-research/">Tongyi DeepResearch: A New Era of Open-Source AI Researchers</a>
+                      </h2>
+
+                    
+
+                    
+                      <div class="result__extras">
+                        <div class="result__extras__url">
+                          <span class="result__icon">
+                            <a rel="nofollow" href="https://tongyi-agent.github.io/blog/introducing-tongyi-deep-research/">
+                              <img class="result__icon__img" width="16" height="16" alt="" src="//external-content.duckduckgo.com/ip3/tongyi-agent.github.io.ico" name="i15" />
+                            </a>
+                          </span>
+                          <a class="result__url" href="https://tongyi-agent.github.io/blog/introducing-tongyi-deep-research/">
+                            tongyi-agent.github.io/blog/introducing-tongyi-deep-research/
+                          </a>
+                          
+                            <span>&nbsp; &nbsp; 2025-09-16T00:00:00.0000000</span>
+                          
+                        </div>
+                      </div>
+                    
+
+                    
+                      
+                        <a class="result__snippet" href="https://tongyi-agent.github.io/blog/introducing-tongyi-deep-research/">GITHUB HUGGINGFACE MODELSCOPE SHOWCASE From Chatbot to Autonomous <b>Agent</b> We are proud to present Tongyi <b>DeepResearch</b>, the first fully <b>open‑source</b> Web <b>Agent</b> to achieve performance on par with OpenAI&#x27;s <b>DeepResearch</b> across a comprehensive suite of benchmarks. Tongyi <b>DeepResearch</b> demonstrates state‑of‑the‑art results, scoring 32.9 on the academic reasoning task Humanity&#x27;s Last Exam (HLE ...</a>
+                      
+                    
+
+                    <div class="clear"></div>
+                  </div>
+                </div>
+              
+            
+
+            
+              
+              
+                <div class="nav-link">
+                  <form action="/html/" method="post">
+                    <input type="submit" class='btn btn--alt' value="Next" />
+                    <input type="hidden" name="q" value="open source deep research agent" />
+                    <input type="hidden" name="s" value="10" />
+                    <input type="hidden" name="nextParams" value="" />
+                    <input type="hidden" name="v" value="l" />
+                    <input type="hidden" name="o" value="json" />
+                    <input type="hidden" name="dc" value="11" />
+                    <input type="hidden" name="api" value="d.js" />
+                    <input type="hidden" name="vqd" value="4-227794477832957032873976751300017430272" />
+
+                    
+                    
+                    
+                      <input name="kl" value="wt-wt" type="hidden" />
+                    
+                    
+                    
+                    
+                  </form>
+                </div>
+              
+            
+
+            <div class="feedback-btn">
+              <a rel="nofollow" href="//duckduckgo.com/feedback.html" target="_new">Feedback</a>
+            </div>
+            <div class="clear"></div>
+          </div>
+        </div>
+      </div> <!-- links wrapper //-->
+    
+  </div>
+
+  <div id="bottom_spacing2"></div>
+
+  
+    <img src="//duckduckgo.com/t/sl_h"/>
+  
+</body>
+</html>

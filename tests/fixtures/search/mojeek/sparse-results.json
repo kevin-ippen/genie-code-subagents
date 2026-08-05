@@ -1,0 +1,23 @@
+{
+  "backend": "mojeek",
+  "scenario": "sparse-results",
+  "query": "xyzzyplugh42 nonexistent page foobarbaz",
+  "captured_at": "2026-08-05T17:42:50.506154+00:00",
+  "upstream_ddgs_version": "9.14.4",
+  "request_url": "https://www.mojeek.com/search",
+  "final_url": "",
+  "status_code": null,
+  "body_sha256": "179b24f7de9809fda958cb0e335ba300da98d0b3f0af0d9d48bab02a805ab880",
+  "body_length": 39,
+  "elapsed_ms": 12004,
+  "parsed_result_count": 0,
+  "error": "DDGSException: No results found.",
+  "expected": {
+    "outcome": "upstream_error",
+    "minimum_results": 0,
+    "required_fields": [
+      "title",
+      "url"
+    ]
+  }
+}

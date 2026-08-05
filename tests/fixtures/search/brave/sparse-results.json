@@ -1,0 +1,24 @@
+{
+  "backend": "brave",
+  "scenario": "sparse-results",
+  "query": "xyzzyplugh42 nonexistent page foobarbaz",
+  "captured_at": "2026-08-05T17:42:26.440897+00:00",
+  "upstream_ddgs_version": "9.14.4",
+  "request_url": "https://search.brave.com/search",
+  "final_url": "https://search.brave.com/search?q=xyzzyplugh42+nonexistent+page+foobarbaz",
+  "status_code": 429,
+  "body_sha256": "bb53eb91006ddc0c9b515bebf1dcd9b562af841fbf4b137df6f45134f6fa19cc",
+  "body_length": 73351,
+  "elapsed_ms": 666,
+  "parsed_result_count": 10,
+  "error": null,
+  "expected": {
+    "outcome": "ok",
+    "minimum_results": 3,
+    "required_fields": [
+      "title",
+      "url"
+    ]
+  },
+  "_note": "Brave returned results even for gibberish query. Useful as baseline, not as no-results fixture."
+}

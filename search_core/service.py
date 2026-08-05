@@ -31,6 +31,9 @@ class SearchService:
         self._providers = {}
         self._default_provider: Optional[str] = None
 
+        # Cache
+        self._cache = SearchCache()
+
         # DuckDuckGo (always available — no API key, fully self-contained)
         ddg = HtmlMetasearchProvider()
         self._providers["html_metasearch"] = ddg

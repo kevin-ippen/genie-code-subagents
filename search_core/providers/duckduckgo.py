@@ -57,38 +57,6 @@ SECONDARY_BACKENDS = ("mojeek",)
 # Use vendored parser via _parse_ddg_html() as fallback.
 EMERGENCY_BACKENDS = ("duckduckgo", "yahoo", "startpage")
 
-    @staticmethod
-    def _sync_search_ddg_fallback(
-        query: str,
-        max_results: int = 10,
-        timelimit: str | None = None,
-    ) -> list[dict]:
-        """Fallback: direct HTTP to DDG HTML endpoint + vendored parser.
-
-        Used when ddgs adapter fails (parser drift confirmed in 9.14.4).
-        Exercises the same endpoint but uses our own extraction.
-        """
-        import httpx
-
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-            "Accept": "text/html,application/xhtml+xml",
-            "Accept-Language": "en-US,en;q=0.9",
-        }
-        data = {"q": query, "b": ""}
-        if timelimit:
-            data["df"] = timelimit
-
-        with httpx.Client(timeout=10, follow_redirects=True, headers=headers) as client:
-            resp = client.post("https://html.duckduckgo.com/html/", data=data)
-            resp.raise_for_status()
-            return _vendored_ddg_parse(resp.text, max_results=max_results)
-
-
 # Reference: always included for factual/definitional queries
 REFERENCE_BACKENDS = ("wikipedia",)
 
@@ -175,6 +143,40 @@ class HtmlMetasearchProvider:
     @property
     def supports_freshness(self) -> bool:
         return True
+
+
+    @staticmethod
+    def _sync_search_ddg_fallback(
+        query: str,
+        max_results: int = 10,
+        timelimit: str | None = None,
+    ) -> list[dict]:
+        """Fallback: direct HTTP to DDG HTML endpoint + vendored parser.
+
+        Used when ddgs adapter fails (parser drift confirmed in 9.14.4).
+        Exercises the same endpoint but uses our own extraction.
+        """
+        import httpx
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        data = {"q": query, "b": ""}
+        if timelimit:
+            data["df"] = timelimit
+
+        with httpx.Client(timeout=10, follow_redirects=True, headers=headers) as client:
+            resp = client.post("https://html.duckduckgo.com/html/", data=data)
+            resp.raise_for_status()
+            return _vendored_ddg_parse(resp.text, max_results=max_results)
+
+
 
     async def search(self, request: SearchRequest) -> SearchResponse:
         """Execute multi-provider search with RRF fusion."""

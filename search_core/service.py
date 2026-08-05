@@ -1,11 +1,12 @@
-"""Search service: routes queries to providers and normalizes responses.
+"""Search service: facade over SearchBroker for backward compatibility.
 
-This is the single entry point for all search operations. It:
-1. Selects the appropriate provider based on request params
-2. Executes the search
-3. Normalizes, canonicalizes, and deduplicates results
-4. Applies domain diversity rules
-5. Returns a deterministic SearchResponse
+This delegates all search routing to the broker which owns:
+- Provider admission (semaphores, coalescing, budgets)
+- Progressive escalation (one-provider-first, fallback on poor results)
+- Cache (fresh + stale-if-error)
+
+Callers use SearchService exactly as before. The difference is internal:
+no concurrent fan-out by default, and proper admission control.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from typing import Optional
 from .models import SearchRequest, SearchResponse
 from .normalization import deduplicate_results, extract_domain
 from .cache import SearchCache
+from .broker import SearchBroker
 from .providers.duckduckgo import HtmlMetasearchProvider
 from .providers.brave import BraveSearchProvider
 
@@ -24,60 +26,65 @@ logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """Universal search service with provider routing."""
+    """Universal search service.
+
+    Maintains backward-compatible interface. Internally delegates to
+    SearchBroker for admission control and provider routing.
+    """
 
     def __init__(self):
-        # Initialize available providers
-        self._providers = {}
-        self._default_provider: Optional[str] = None
-
-        # Cache
+        # Cache (shared with broker)
         self._cache = SearchCache()
 
-        # DuckDuckGo (always available — no API key, fully self-contained)
-        ddg = HtmlMetasearchProvider()
-        self._providers["html_metasearch"] = ddg
-        self._default_provider = "html_metasearch"
-        logger.info("HtmlMetasearchProvider ready (brave+mojeek+ddg, no API keys)")
+        # Broker (owns all provider interactions)
+        self._broker = SearchBroker(cache=self._cache)
 
-        # Brave (optional upgrade if API key is set)
+        # Register providers with their tiers
+        # DDG HTML metasearch — always available, no API keys
+        ddg = HtmlMetasearchProvider()
+        self._broker.register_provider("duckduckgo", ddg, tier="secondary")
+
+        # Brave — preferred when available (richer snippets, structured data)
         brave = BraveSearchProvider()
         if brave.is_available:
-            self._providers["brave"] = brave
-            self._default_provider = "brave"  # Prefer Brave when available
-            logger.info("Brave Search provider configured (upgrade)")
+            self._broker.register_provider("brave", brave, tier="primary")
+            logger.info("Brave Search registered (primary)")
+        else:
+            # Promote DDG to primary when Brave unavailable
+            self._broker._providers["duckduckgo"].tier = "primary"
+
+        logger.info(f"SearchService ready: {self._broker.provider_names}")
+
+    @property
+    def broker(self) -> SearchBroker:
+        """Expose broker for run-budget management."""
+        return self._broker
 
     @property
     def available_providers(self) -> list[str]:
-        return list(self._providers.keys())
+        return self._broker.provider_names
 
     @property
     def is_available(self) -> bool:
-        return bool(self._providers)
+        return bool(self._broker.provider_names)
 
-    async def search(self, request: SearchRequest) -> SearchResponse:
-        """Execute a search request.
+    async def search(
+        self,
+        request: SearchRequest,
+        run_id: Optional[str] = None,
+        strategy: str = "progressive",
+    ) -> SearchResponse:
+        """Execute a search request via the broker.
 
-        Provider selection logic:
-        - "auto": Use the best provider for the request type
-        - Specific name: Use that provider or error
+        Args:
+            request: Search query and parameters.
+            run_id: Optional research-run ID for budget enforcement.
+            strategy: "progressive" (default) or "broad" (fan-out for deep research).
+
+        Returns:
+            SearchResponse (possibly stale on provider failure).
         """
-        # Check cache first
-        cached = self._cache.get(request)
-        if cached is not None:
-            logger.debug(f"Cache hit for: {request.query[:50]}")
-            return cached
-
-        provider = self._select_provider(request)
-        if not provider:
-            return SearchResponse(
-                query=request.query,
-                provider="none",
-                error=self._no_provider_error(request),
-            )
-
-        # Execute search
-        response = await provider.search(request)
+        response = await self._broker.search(request, run_id=run_id, strategy=strategy)
 
         if response.ok:
             # Post-processing: deduplicate and enforce diversity
@@ -91,51 +98,11 @@ class SearchService:
                 if not result.domain:
                     result.domain = extract_domain(result.url)
 
-        # Cache successful responses
-        if response.ok:
-            self._cache.put(request, response)
-
         return response
 
     async def health(self) -> dict:
-        """Check all providers."""
-        results = {}
-        for name, provider in self._providers.items():
-            try:
-                results[name] = await provider.health_check()
-            except Exception:
-                results[name] = False
-        return results
-
-    # ------------------------------------------------------------------
-    # Internal
-    # ------------------------------------------------------------------
-
-    def _select_provider(self, request: SearchRequest):
-        """Select provider based on request."""
-        if request.provider != "auto":
-            return self._providers.get(request.provider)
-
-        # Auto-routing logic:
-        # - News queries go to providers with news support
-        # - Default to primary provider
-        if request.category == "news":
-            for p in self._providers.values():
-                if p.supports_news:
-                    return p
-
-        # Fallback to default
-        if self._default_provider:
-            return self._providers[self._default_provider]
-
-        # Return first available
-        return next(iter(self._providers.values()), None)
-
-    def _no_provider_error(self, request: SearchRequest) -> str:
-        if request.provider != "auto" and request.provider not in self._providers:
-            available = ", ".join(self._providers.keys()) if self._providers else "none"
-            return f"Provider '{request.provider}' not available. Configured: [{available}]"
-        return "No search providers available."
+        """Quick broker state snapshot."""
+        return self._broker.stats
 
     @staticmethod
     def _enforce_domain_diversity(results: list, max_per_domain: int = 3) -> list:

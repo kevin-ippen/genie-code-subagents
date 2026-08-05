@@ -92,6 +92,13 @@ async def execute_research(
 
     search_service = get_search_service()
 
+    # Register budget for this run (enforced at broker level)
+    strategy = "broad" if config.depth == "deep" else "progressive"
+    search_service.broker.create_budget(
+        run_id=run.run_id,
+        max_searches=config.max_searches,
+    )
+
     # ---------------------------------------------------------------
     # Step 1: Plan
     # ---------------------------------------------------------------
@@ -112,10 +119,17 @@ async def execute_research(
     # ---------------------------------------------------------------
     if not search_service.is_available:
         run.error = "No search providers configured. Set BRAVE_SEARCH_API_KEY."
+        # Release budget
+        search_service.broker.release_budget(run.run_id)
+
         run.metrics = {"elapsed_ms": int((time.time() - start_time) * 1000)}
         return run
 
-    search_tasks = []
+    # Sequential search with broker admission control.
+    # The broker handles: budget enforcement, coalescing, provider semaphores.
+    # For "progressive" strategy: one provider at a time, escalate on poor results.
+    # For "broad" (depth=deep): broker internally fans out but with semaphores.
+    search_responses: list[SearchResponse] = []
     for sub_query in plan.sub_queries[:config.max_searches]:
         request = SearchRequest(
             query=sub_query,
@@ -123,9 +137,15 @@ async def execute_research(
             freshness=config.freshness,
             include_domains=config.include_domains,
         )
-        search_tasks.append(search_service.search(request))
-
-    search_responses: list[SearchResponse] = await asyncio.gather(*search_tasks, return_exceptions=True)
+        try:
+            resp = await search_service.search(
+                request,
+                run_id=run.run_id,
+                strategy=strategy,
+            )
+            search_responses.append(resp)
+        except Exception as e:
+            search_responses.append(e)
 
     # Collect all results
     all_results = []
@@ -140,7 +160,7 @@ async def execute_research(
             search_errors.append(resp.error)
 
     run.research_trace["searches"] = {
-        "executed": len(search_tasks),
+        "executed": len(search_responses),
         "total_results": len(all_results),
         "errors": search_errors,
     }
@@ -207,7 +227,7 @@ async def execute_research(
         run.answer = f"Based on search results:\n\n{snippet_text}"
         run.metrics = {
             "elapsed_ms": int((time.time() - start_time) * 1000),
-            "search_requests": len(search_tasks),
+            "search_requests": len(search_responses),
             "pages_read": 0,
         }
         return run
@@ -245,12 +265,15 @@ async def execute_research(
             total_tokens += verification.tokens_used
 
     # ---------------------------------------------------------------
+    # Release broker budget
+    search_service.broker.release_budget(run.run_id)
+
     # Metrics
     # ---------------------------------------------------------------
     run.metrics = {
         "elapsed_ms": int((time.time() - start_time) * 1000),
         "model_tokens": total_tokens,
-        "search_requests": len(search_tasks),
+        "search_requests": len(search_responses),
         "pages_read": len(sources_read),
         "passages_extracted": len(all_passages),
     }

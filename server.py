@@ -60,57 +60,444 @@ ALLOWED_IMAGE_MIMES = frozenset(["image/png", "image/jpeg", "image/webp", "image
 # MODEL REGISTRY & ROUTING (Layer 2)
 # ============================================================
 MODEL_REGISTRY: dict[str, dict] = {
-    "gemini-flash": {
-        "endpoint": "databricks-gemini-3-6-flash",
+    # =========================================================================
+    # Google — Gemini
+    # =========================================================================
+    "gemini-3.5-flash": {
+        "endpoint": "databricks-gemini-3-5-flash",
         "provider": "google",
         "vision": True,
         "thinking": True,
         "max_context": 1_000_000,
-        "max_output": 8192,
+        "max_output": 32768,
         "speed": "fast",
         "cost_tier": "low",
         "concurrency_limit": 10,
     },
-    "gemini-pro": {
+    "gemini-3.1-flash-lite": {
+        "endpoint": "databricks-gemini-3-1-flash-lite",
+        "provider": "google",
+        "vision": True,
+        "thinking": False,
+        "max_context": 1_000_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "gemini-2.5-flash": {
+        "endpoint": "databricks-gemini-2-5-flash",
+        "provider": "google",
+        "vision": True,
+        "thinking": True,
+        "max_context": 1_000_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "gemini-2.5-pro": {
         "endpoint": "databricks-gemini-2-5-pro",
         "provider": "google",
         "vision": True,
         "thinking": True,
         "max_context": 1_000_000,
-        "max_output": 8192,
+        "max_output": 32768,
         "speed": "slow",
         "cost_tier": "high",
         "concurrency_limit": 3,
     },
-    "gpt-5.6": {
-        "endpoint": "databricks-gpt-5-6",
-        "provider": "openai",
-        "vision": True,
-        "thinking": False,
-        "max_context": 128_000,
-        "max_output": 16384,
-        "speed": "medium",
-        "cost_tier": "high",
-        "concurrency_limit": 5,
-    },
-    "claude-sonnet": {
-        "endpoint": "databricks-claude-sonnet-4",
+    # =========================================================================
+    # Anthropic — Claude
+    # =========================================================================
+    "claude-haiku-4.5": {
+        "endpoint": "databricks-claude-haiku-4-5",
         "provider": "anthropic",
         "vision": True,
         "thinking": False,
         "max_context": 200_000,
-        "max_output": 8192,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "claude-sonnet-4": {
+        "endpoint": "databricks-claude-sonnet-4",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 32768,
         "speed": "medium",
         "cost_tier": "medium",
         "concurrency_limit": 5,
     },
-    "llama-maverick": {
-        "endpoint": "databricks-meta-llama-4-maverick",
+    "claude-sonnet-4.5": {
+        "endpoint": "databricks-claude-sonnet-4-5",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 32768,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
+    "claude-sonnet-4.6": {
+        "endpoint": "databricks-claude-sonnet-4-6",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 32768,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
+    "claude-sonnet-5": {
+        "endpoint": "databricks-claude-sonnet-5",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "claude-opus-4.5": {
+        "endpoint": "databricks-claude-opus-4-5",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 65536,
+        "speed": "slow",
+        "cost_tier": "high",
+        "concurrency_limit": 3,
+    },
+    "claude-opus-4.6": {
+        "endpoint": "databricks-claude-opus-4-6",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 65536,
+        "speed": "slow",
+        "cost_tier": "high",
+        "concurrency_limit": 3,
+    },
+    "claude-opus-4.7": {
+        "endpoint": "databricks-claude-opus-4-7",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 65536,
+        "speed": "slow",
+        "cost_tier": "high",
+        "concurrency_limit": 3,
+    },
+    "claude-opus-4.8": {
+        "endpoint": "databricks-claude-opus-4-8",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 65536,
+        "speed": "slow",
+        "cost_tier": "high",
+        "concurrency_limit": 3,
+    },
+    "claude-opus-5": {
+        "endpoint": "databricks-claude-opus-5",
+        "provider": "anthropic",
+        "vision": True,
+        "thinking": True,
+        "max_context": 200_000,
+        "max_output": 65536,
+        "speed": "slow",
+        "cost_tier": "high",
+        "concurrency_limit": 3,
+    },
+    # =========================================================================
+    # OpenAI — GPT
+    # =========================================================================
+    "gpt-5": {
+        "endpoint": "databricks-gpt-5",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.1": {
+        "endpoint": "databricks-gpt-5-1",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.2": {
+        "endpoint": "databricks-gpt-5-2",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.3-codex": {
+        "endpoint": "databricks-gpt-5-3-codex",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 131072,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.4": {
+        "endpoint": "databricks-gpt-5-4",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.4-mini": {
+        "endpoint": "databricks-gpt-5-4-mini",
+        "provider": "openai",
+        "vision": True,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "gpt-5.4-nano": {
+        "endpoint": "databricks-gpt-5-4-nano",
+        "provider": "openai",
+        "vision": True,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "gpt-5.5": {
+        "endpoint": "databricks-gpt-5-5",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.5-pro": {
+        "endpoint": "databricks-gpt-5-5-pro",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "slow",
+        "cost_tier": "high",
+        "concurrency_limit": 3,
+    },
+    "gpt-5.6-luna": {
+        "endpoint": "databricks-gpt-5-6-luna",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.6-sol": {
+        "endpoint": "databricks-gpt-5-6-sol",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5.6-terra": {
+        "endpoint": "databricks-gpt-5-6-terra",
+        "provider": "openai",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "medium",
+        "cost_tier": "high",
+        "concurrency_limit": 5,
+    },
+    "gpt-5-mini": {
+        "endpoint": "databricks-gpt-5-mini",
+        "provider": "openai",
+        "vision": True,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "gpt-5-nano": {
+        "endpoint": "databricks-gpt-5-nano",
+        "provider": "openai",
+        "vision": True,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "gpt-oss-120b": {
+        "endpoint": "databricks-gpt-oss-120b",
+        "provider": "openai",
+        "vision": False,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
+    "gpt-oss-20b": {
+        "endpoint": "databricks-gpt-oss-20b",
+        "provider": "openai",
+        "vision": False,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    # =========================================================================
+    # Meta — Llama
+    # =========================================================================
+    "llama-4-maverick": {
+        "endpoint": "databricks-llama-4-maverick",
         "provider": "meta",
         "vision": True,
         "thinking": False,
         "max_context": 128_000,
-        "max_output": 8192,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "llama-3.3-70b": {
+        "endpoint": "databricks-meta-llama-3-3-70b-instruct",
+        "provider": "meta",
+        "vision": False,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    "llama-3.1-8b": {
+        "endpoint": "databricks-meta-llama-3-1-8b-instruct",
+        "provider": "meta",
+        "vision": False,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 16384,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    # =========================================================================
+    # Zhipu — GLM
+    # =========================================================================
+    "glm-5.2": {
+        "endpoint": "databricks-glm-5-2",
+        "provider": "zhipu",
+        "vision": False,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    # =========================================================================
+    # Alibaba — Qwen
+    # =========================================================================
+    "qwen3-next-80b": {
+        "endpoint": "databricks-qwen3-next-80b-a3b-instruct",
+        "provider": "alibaba",
+        "vision": False,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
+    "qwen3.5-122b": {
+        "endpoint": "databricks-qwen35-122b-a10b",
+        "provider": "alibaba",
+        "vision": False,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "medium",
+        "cost_tier": "medium",
+        "concurrency_limit": 5,
+    },
+    # =========================================================================
+    # Google — Gemma (open-weight)
+    # =========================================================================
+    "gemma-3-12b": {
+        "endpoint": "databricks-gemma-3-12b",
+        "provider": "google",
+        "vision": False,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    # =========================================================================
+    # Databricks — Inkling
+    # =========================================================================
+    "inkling": {
+        "endpoint": "databricks-inkling",
+        "provider": "databricks",
+        "vision": False,
+        "thinking": False,
+        "max_context": 128_000,
+        "max_output": 32768,
         "speed": "fast",
         "cost_tier": "low",
         "concurrency_limit": 10,
@@ -118,20 +505,20 @@ MODEL_REGISTRY: dict[str, dict] = {
 }
 
 DEFAULT_ROUTING: dict[str, str] = {
-    "analyze": "gemini-flash",
-    "vision": "gemini-flash",
-    "fan_out": "gemini-flash",
-    "structured_extract": "gemini-flash",
-    "browser_planning": "gemini-flash",
-    "browser_summarize": "gemini-flash",
-    "debate_generator": "gemini-flash",
-    "debate_critic": "gemini-flash",
-    "cascade_fast": "gemini-flash",
-    "cascade_powerful": "gemini-pro",
-    "research_extract": "gemini-flash",
-    "research_synthesize": "gemini-flash",
-    "research_planner": "gemini-flash",
-    "research_verifier": "gemini-flash",
+    "analyze": "gemini-3.5-flash",
+    "vision": "gemini-3.5-flash",
+    "fan_out": "gemini-3.5-flash",
+    "structured_extract": "gemini-3.5-flash",
+    "browser_planning": "gemini-3.5-flash",
+    "browser_summarize": "gemini-3.5-flash",
+    "debate_generator": "gemini-3.5-flash",
+    "debate_critic": "gemini-3.5-flash",
+    "cascade_fast": "gemini-3.5-flash",
+    "cascade_powerful": "gemini-2.5-pro",
+    "research_extract": "gemini-3.5-flash",
+    "research_synthesize": "gemini-3.5-flash",
+    "research_planner": "gemini-3.5-flash",
+    "research_verifier": "gemini-3.5-flash",
 }
 
 for key in list(MODEL_REGISTRY.keys()):
@@ -147,14 +534,14 @@ def resolve_model(role: str, override: str | None = None) -> dict:
         if override not in MODEL_REGISTRY:
             raise ValueError(f"Unknown model: {override}. Available: {list(MODEL_REGISTRY.keys())}")
         return MODEL_REGISTRY[override]
-    model_key = DEFAULT_ROUTING.get(role, "gemini-flash")
+    model_key = DEFAULT_ROUTING.get(role, "gemini-3.5-flash")
     return MODEL_REGISTRY[model_key]
 
 
 def _model_key_for(role: str, override: str | None = None) -> str:
     if override and override in MODEL_REGISTRY:
         return override
-    return DEFAULT_ROUTING.get(role, "gemini-flash")
+    return DEFAULT_ROUTING.get(role, "gemini-3.5-flash")
 
 
 # ============================================================
@@ -255,17 +642,32 @@ def extract_text(provider: str, content: Any) -> str:
     return str(content)
 
 
-async def _call_model(role: str, messages: list[dict], max_tokens: int = 1024,
+async def _call_model(role: str, messages: list[dict], max_tokens: int = 4096,
                       override: str | None = None) -> dict:
     """Core model call with routing, semaphore, retry."""
     model_key = _model_key_for(role, override)
     config = MODEL_REGISTRY[model_key]
     token = _get_token()
     host = os.environ.get("DATABRICKS_HOST", "").rstrip("/")
+    if not host or not host.startswith("http"):
+        # Fallback: derive from WorkspaceClient config
+        try:
+            from databricks.sdk import WorkspaceClient as _WC
+            host = _WC().config.host.rstrip("/")
+        except Exception:
+            host = ""
+    if not host:
+        return {"text": "", "error": "DATABRICKS_HOST not set and cannot be derived", "model": model_key}
     client = AsyncOpenAI(api_key=token, base_url=f"{host}/serving-endpoints", max_retries=0)
     sem = _get_semaphore(model_key)
 
-    max_tokens = min(max_tokens, config["max_output"])
+    # For thinking models, reasoning tokens count against max_tokens.
+    # Inflate budget so visible output gets the requested allocation.
+    if config.get("thinking"):
+        # Thinking models use 60-80% of budget for reasoning; give 6x headroom
+        effective_max = min(max_tokens * 6, config["max_output"])
+    else:
+        effective_max = min(max_tokens, config["max_output"])
     start = time.time()
     retries = 0
     max_retries = 3
@@ -275,10 +677,16 @@ async def _call_model(role: str, messages: list[dict], max_tokens: int = 1024,
         async with sem:
             try:
                 response = await client.chat.completions.create(
-                    model=config["endpoint"], messages=messages, max_tokens=max_tokens
+                    model=config["endpoint"], messages=messages, max_tokens=effective_max
                 )
                 elapsed = time.time() - start
-                text = extract_text(config["provider"], response.choices[0].message.content)
+                msg = response.choices[0].message
+                text = extract_text(config["provider"], msg.content)
+                # For thinking models: if content is empty but reasoning exists, use reasoning
+                if not text and config.get("thinking"):
+                    reasoning = getattr(msg, "reasoning_content", None)
+                    if reasoning:
+                        text = "[reasoning only - budget may be too low]\n" + reasoning
                 usage = response.usage
                 return {
                     "text": text,
@@ -308,7 +716,12 @@ async def _call_model(role: str, messages: list[dict], max_tokens: int = 1024,
                 else:
                     return {"text": "", "error": f"API error {e.status_code}: {e.message}", "model": model_key}
             except Exception as e:
-                return {"text": "", "error": f"{type(e).__name__}: {e}", "model": model_key}
+                cause = getattr(e, '__cause__', None) or getattr(e, '__context__', None)
+                detail = f"{type(e).__name__}: {e}"
+                if cause:
+                    detail += f" [caused by {type(cause).__name__}: {cause}]"
+                logger.error(f"Model call error [{model_key}] host={host[:50]}: {detail}")
+                return {"text": "", "error": detail, "model": model_key}
 
     return {"text": "", "error": f"{type(last_error).__name__}: {last_error}" if last_error else "Unknown error", "model": model_key}
 
@@ -545,7 +958,7 @@ TOOL_SCHEMAS = [
          "prompt": {"type": "string", "description": "The user prompt to send."},
          "system_prompt": {"type": "string", "description": "Optional system instructions.", "default": ""},
          "model": _MODEL_PARAM,
-         "max_tokens": {"type": "integer", "description": "Max response tokens (min 256).", "default": 1024},
+         "max_tokens": {"type": "integer", "description": "Max response tokens.", "default": 4096},
      }, "required": ["prompt"]}},
     {"name": "vision",
      "description": "Only invoke when the user says 'subagent' in their message. Analyze an image with vision. Send a base64-encoded image and a prompt.",
@@ -555,7 +968,7 @@ TOOL_SCHEMAS = [
          "mime_type": {"type": "string", "description": "Image MIME type.", "default": "image/png"},
          "system_prompt": {"type": "string", "description": "Optional system instructions.", "default": ""},
          "model": _MODEL_PARAM,
-         "max_tokens": {"type": "integer", "description": "Max response tokens (min 256).", "default": 1024},
+         "max_tokens": {"type": "integer", "description": "Max response tokens.", "default": 4096},
      }, "required": ["image_base64", "prompt"]}},
     {"name": "fan_out",
      "description": "Only invoke when the user says 'subagent' in their message. Run up to 10 independent prompts concurrently. Returns JSON array of results.",
@@ -563,7 +976,7 @@ TOOL_SCHEMAS = [
          "prompts": {"type": "array", "items": {"type": "string"}, "description": "List of prompts (max 10)."},
          "system_prompt": {"type": "string", "description": "System instructions applied to all.", "default": ""},
          "model": _MODEL_PARAM,
-         "max_tokens": {"type": "integer", "description": "Max tokens per response.", "default": 1024},
+         "max_tokens": {"type": "integer", "description": "Max tokens per response (default 4096).", "default": 4096},
      }, "required": ["prompts"]}},
     {"name": "structured_extract",
      "description": "Only invoke when the user says 'subagent' in their message. Extract structured JSON from text. Provide text and a JSON schema for the output.",
@@ -572,7 +985,7 @@ TOOL_SCHEMAS = [
          "schema_json": {"type": "string", "description": "JSON Schema string for output structure."},
          "extraction_prompt": {"type": "string", "description": "Additional extraction instructions.", "default": ""},
          "model": _MODEL_PARAM,
-         "max_tokens": {"type": "integer", "description": "Max tokens.", "default": 1024},
+         "max_tokens": {"type": "integer", "description": "Max tokens (default 4096).", "default": 4096},
      }, "required": ["text", "schema_json"]}},
     {"name": "inspect_page",
      "description": "Only invoke when the user says 'subagent' in their message. Open a URL in a headless browser and return the page's accessibility tree, a screenshot, and an AI-generated summary. ASYNC: returns a task_id immediately. Use get_task_result to retrieve the output.",
@@ -604,11 +1017,16 @@ TOOL_SCHEMAS = [
     {"name": "debate",
      "description": "Only invoke when the user says 'subagent' in their message. Adversarial review: Model A generates, Model B critiques, Model A refines (conditional). ASYNC: returns a task_id immediately.",
      "inputSchema": {"type": "object", "properties": {
+            "model": {
+              "type": "string",
+              "default": None,
+              "description": "Override default model. Use status tool to see options."
+            },
          "prompt": {"type": "string", "description": "The prompt/question to debate."},
          "system_prompt": {"type": "string", "description": "Optional system instructions for generator.", "default": ""},
          "generator_model": {"type": "string", "description": "Override generator model.", "default": None},
          "critic_model": {"type": "string", "description": "Override critic model.", "default": None},
-         "max_tokens": {"type": "integer", "description": "Max tokens per stage.", "default": 2048},
+         "max_tokens": {"type": "integer", "description": "Max tokens per stage (default 8192).", "default": 8192},
      }, "required": ["prompt"]}},
     {"name": "research",
      "description": "Only invoke when the user says 'subagent' in their message. Multi-page research: plan sub-queries, search multiple providers concurrently, read selected sources, synthesize with citations, and verify claims. ASYNC: returns a task_id immediately.",
@@ -1118,7 +1536,7 @@ async def _do_research(task_id, query, start_urls, max_pages, model_override, us
             "total_tokens": total_tokens,
         }
         _complete_task(task_id, json.dumps(output, indent=2),
-                       model_used=model_override or "gemini-flash", tokens=total_tokens)
+                       model_used=model_override or "gemini-3.5-flash", tokens=total_tokens)
     except Exception as e:
         _fail_task(task_id, str(e))
 
@@ -1175,7 +1593,7 @@ async def _do_research_v2(task_id: str, query: str, max_pages: int, model_overri
         _complete_task(
             task_id,
             json.dumps(result.to_dict(), indent=2),
-            model_used=model_override or "gemini-flash",
+            model_used=model_override or "gemini-3.5-flash",
             tokens=result.metrics.get("model_tokens", 0),
         )
     except Exception as e:
@@ -1207,7 +1625,7 @@ async def _crawl_extract_page(url, extract_schema, model_override, user_token):
                 '  "links": array of ALL href URLs found on this page (max 50)',
                 "",
                 "Return ONLY valid JSON. If the page has no matching data, return:",
-                '{"data": null, "links": [...]}',
+                '{"data": None, "links": [...]}',
                 "",
                 "ARIA Tree (first 7000 chars):",
                 aria[:7000],
@@ -1313,7 +1731,7 @@ async def _do_crawl(task_id, start_url, link_pattern, extract_schema,
             "total_tokens": total_tokens,
         }
         _complete_task(task_id, json.dumps(output, indent=2),
-                       model_used=model_override or "gemini-flash", tokens=total_tokens)
+                       model_used=model_override or "gemini-3.5-flash", tokens=total_tokens)
     except Exception as e:
         _fail_task(task_id, str(e))
 
@@ -1430,7 +1848,7 @@ async def _do_journey(task_id, start_url, steps, criteria, model_override, user_
             "total_tokens": total_tokens,
         }
         _complete_task(task_id, json.dumps(output, indent=2),
-                       model_used=model_override or "gemini-flash", tokens=total_tokens)
+                       model_used=model_override or "gemini-3.5-flash", tokens=total_tokens)
     except Exception as e:
         _fail_task(task_id, str(e))
 
@@ -1493,7 +1911,7 @@ async def _do_audit(task_id, start_url, checks_description, link_pattern,
             "total_tokens": total_tokens,
         }
         _complete_task(task_id, json.dumps(output, indent=2),
-                       model_used=model_override or "gemini-flash", tokens=total_tokens)
+                       model_used=model_override or "gemini-3.5-flash", tokens=total_tokens)
     except Exception as e:
         _fail_task(task_id, str(e))
 

@@ -4,10 +4,170 @@ command:
   - "uvicorn server:app --host 0.0.0.0 --port $DATABRICKS_APP_PORT --workers 1"
 env:
   - name: DEFAULT_MODEL
-    value: "databricks-gemini-3-6-flash"
+    value: "databricks-gemini-3-5-flash"
   - name: DEFAULT_CONCURRENCY
     value: "10"
   - name: DEFAULT_MAX_TOKENS
     value: "1024"
   - name: BROWSER_LIBS_PATH
     value: "/app/python/source_code/libs"
+resources:
+  # Google
+  - name: gemini-3-5-flash
+    serving_endpoint:
+      name: databricks-gemini-3-5-flash
+      permission: CAN_QUERY
+  - name: gemini-3-1-flash-lite
+    serving_endpoint:
+      name: databricks-gemini-3-1-flash-lite
+      permission: CAN_QUERY
+  - name: gemini-2-5-flash
+    serving_endpoint:
+      name: databricks-gemini-2-5-flash
+      permission: CAN_QUERY
+  - name: gemini-2-5-pro
+    serving_endpoint:
+      name: databricks-gemini-2-5-pro
+      permission: CAN_QUERY
+  - name: gemma-3-12b
+    serving_endpoint:
+      name: databricks-gemma-3-12b
+      permission: CAN_QUERY
+  # Anthropic
+  - name: claude-haiku-4-5
+    serving_endpoint:
+      name: databricks-claude-haiku-4-5
+      permission: CAN_QUERY
+  - name: claude-sonnet-4
+    serving_endpoint:
+      name: databricks-claude-sonnet-4
+      permission: CAN_QUERY
+  - name: claude-sonnet-4-5
+    serving_endpoint:
+      name: databricks-claude-sonnet-4-5
+      permission: CAN_QUERY
+  - name: claude-sonnet-4-6
+    serving_endpoint:
+      name: databricks-claude-sonnet-4-6
+      permission: CAN_QUERY
+  - name: claude-sonnet-5
+    serving_endpoint:
+      name: databricks-claude-sonnet-5
+      permission: CAN_QUERY
+  - name: claude-opus-4-5
+    serving_endpoint:
+      name: databricks-claude-opus-4-5
+      permission: CAN_QUERY
+  - name: claude-opus-4-6
+    serving_endpoint:
+      name: databricks-claude-opus-4-6
+      permission: CAN_QUERY
+  - name: claude-opus-4-7
+    serving_endpoint:
+      name: databricks-claude-opus-4-7
+      permission: CAN_QUERY
+  - name: claude-opus-4-8
+    serving_endpoint:
+      name: databricks-claude-opus-4-8
+      permission: CAN_QUERY
+  - name: claude-opus-5
+    serving_endpoint:
+      name: databricks-claude-opus-5
+      permission: CAN_QUERY
+  # OpenAI
+  - name: gpt-5
+    serving_endpoint:
+      name: databricks-gpt-5
+      permission: CAN_QUERY
+  - name: gpt-5-1
+    serving_endpoint:
+      name: databricks-gpt-5-1
+      permission: CAN_QUERY
+  - name: gpt-5-2
+    serving_endpoint:
+      name: databricks-gpt-5-2
+      permission: CAN_QUERY
+  - name: gpt-5-3-codex
+    serving_endpoint:
+      name: databricks-gpt-5-3-codex
+      permission: CAN_QUERY
+  - name: gpt-5-4
+    serving_endpoint:
+      name: databricks-gpt-5-4
+      permission: CAN_QUERY
+  - name: gpt-5-4-mini
+    serving_endpoint:
+      name: databricks-gpt-5-4-mini
+      permission: CAN_QUERY
+  - name: gpt-5-4-nano
+    serving_endpoint:
+      name: databricks-gpt-5-4-nano
+      permission: CAN_QUERY
+  - name: gpt-5-5
+    serving_endpoint:
+      name: databricks-gpt-5-5
+      permission: CAN_QUERY
+  - name: gpt-5-5-pro
+    serving_endpoint:
+      name: databricks-gpt-5-5-pro
+      permission: CAN_QUERY
+  - name: gpt-5-6-luna
+    serving_endpoint:
+      name: databricks-gpt-5-6-luna
+      permission: CAN_QUERY
+  - name: gpt-5-6-sol
+    serving_endpoint:
+      name: databricks-gpt-5-6-sol
+      permission: CAN_QUERY
+  - name: gpt-5-6-terra
+    serving_endpoint:
+      name: databricks-gpt-5-6-terra
+      permission: CAN_QUERY
+  - name: gpt-5-mini
+    serving_endpoint:
+      name: databricks-gpt-5-mini
+      permission: CAN_QUERY
+  - name: gpt-5-nano
+    serving_endpoint:
+      name: databricks-gpt-5-nano
+      permission: CAN_QUERY
+  - name: gpt-oss-120b
+    serving_endpoint:
+      name: databricks-gpt-oss-120b
+      permission: CAN_QUERY
+  - name: gpt-oss-20b
+    serving_endpoint:
+      name: databricks-gpt-oss-20b
+      permission: CAN_QUERY
+  # Meta
+  - name: llama-4-maverick
+    serving_endpoint:
+      name: databricks-llama-4-maverick
+      permission: CAN_QUERY
+  - name: llama-3-3-70b
+    serving_endpoint:
+      name: databricks-meta-llama-3-3-70b-instruct
+      permission: CAN_QUERY
+  - name: llama-3-1-8b
+    serving_endpoint:
+      name: databricks-meta-llama-3-1-8b-instruct
+      permission: CAN_QUERY
+  # Zhipu
+  - name: glm-5-2
+    serving_endpoint:
+      name: databricks-glm-5-2
+      permission: CAN_QUERY
+  # Alibaba
+  - name: qwen3-next-80b
+    serving_endpoint:
+      name: databricks-qwen3-next-80b-a3b-instruct
+      permission: CAN_QUERY
+  - name: qwen35-122b
+    serving_endpoint:
+      name: databricks-qwen35-122b-a10b
+      permission: CAN_QUERY
+  # Databricks
+  - name: inkling
+    serving_endpoint:
+      name: databricks-inkling
+      permission: CAN_QUERY

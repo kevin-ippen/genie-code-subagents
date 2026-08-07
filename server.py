@@ -475,6 +475,20 @@ MODEL_REGISTRY: dict[str, dict] = {
         "concurrency_limit": 5,
     },
     # =========================================================================
+    # Moonshot — Kimi
+    # =========================================================================
+    "kimi-k3": {
+        "endpoint": "databricks-kimi-k3",
+        "provider": "moonshot",
+        "vision": True,
+        "thinking": True,
+        "max_context": 128_000,
+        "max_output": 65536,
+        "speed": "fast",
+        "cost_tier": "low",
+        "concurrency_limit": 10,
+    },
+    # =========================================================================
     # Google — Gemma (open-weight)
     # =========================================================================
     "gemma-3-12b": {

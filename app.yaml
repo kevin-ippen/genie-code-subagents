@@ -166,6 +166,11 @@ resources:
     serving_endpoint:
       name: databricks-qwen35-122b-a10b
       permission: CAN_QUERY
+  # Moonshot
+  - name: kimi-k3
+    serving_endpoint:
+      name: databricks-kimi-k3
+      permission: CAN_QUERY
   # Databricks
   - name: inkling
     serving_endpoint:
